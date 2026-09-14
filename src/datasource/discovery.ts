@@ -11,7 +11,7 @@ import type { DataSource } from "./models.js";
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
 const BASE_CKAN_PATH: string = '/ckan/dataset'
 
-export async function BuildDataSources() {
+export async function BuildDataSources(): Promise<DataSource[] | null> {
     // =====
     // PASSO 1. Descoberta dos datasets disponíveis na página principal dos datasets no ckan
     // Adicionado o search para filtrar por datasets com API disponível
@@ -22,7 +22,7 @@ export async function BuildDataSources() {
 
     if (!discoveredDatasetHrefs) {
         console.log("[ERRO: PASSO 1] A lista de datasets descobertos não foi gerada corretamente.");
-        return;
+        return null;
     }
     console.log(`\n[DATA] Datasets encontrados: ${discoveredDatasetHrefs.length}`);
     console.table(discoveredDatasetHrefs);
@@ -30,12 +30,15 @@ export async function BuildDataSources() {
     const browser = await puppeteer.launch({ headless: true });
     let builtDataSources: DataSource[] = [];
     for (const discoveredDatasetHref of discoveredDatasetHrefs) {
+        // TEMP
+        console.clear();
+
         // PASSO 2. Montagem dos URLs da página de cada dataset encontrado no PASSO 1
         let datasetPageUrl: string | null = await BuildDatasetPageUrl(discoveredDatasetHref, ckanMainPageBaseUrl)
 
         if (!datasetPageUrl) {
             console.log("[ERRO: PASSO 2] A URL da página do dataset não foi gerada corretamente.");
-            return;
+            continue;
         }
 
         console.log(`\n[1 | DATA] URL da página do dataset:`)
@@ -48,7 +51,7 @@ export async function BuildDataSources() {
 
         if (!datasetId) {
             console.log(`[ERRO: PASSO 3] O id do dataset não foi gerada corretamente.\nHREF ${discoveredDatasetHref}`);
-            return;
+            continue;
         }
 
         console.log(`\n[2 | DATA] ID do dataset:`)
@@ -62,7 +65,7 @@ export async function BuildDataSources() {
 
         if (!datasetApiDocPageUrl) {
             console.log(`[ERRO: PASSO 4] A url para a página da documentação da API do dataset não foi gerada corretamente.\nHREF: ${discoveredDatasetHref}`);
-            return;
+            continue;
         }
 
         console.log(`\n[3 | DATA] Dataset Api Documentation Page URL:`);
@@ -75,7 +78,7 @@ export async function BuildDataSources() {
 
         if (!datasetApiPortalUrl) {
             console.log(`[ERRO: PASSO 5] A url para o portal da API do dataset não foi gerada corretamente.\nHREF: ${discoveredDatasetHref}`);
-            return;
+            continue;
         }
         console.log(`\n[4 | DATA] Dataset API Portal Page URL:`);
         console.table(datasetApiPortalUrl);
@@ -94,14 +97,14 @@ export async function BuildDataSources() {
 
         if (!datasetBaseUrl) {
             console.log(`[ERRO: PASSO 6] Não foi possível obter a URL base do dataset.\n${discoveredDatasetHref}`);
-            return;
+            continue;
         }
 
         console.log(`\n[5 | DATA] URL base: ${datasetBaseUrl}`);
 
         if (!datasetApiData['paths']) {
             console.log(`[ERRO: PASSO 6] Não foram encontrados paths (endpoints) para a url do dataset.\nURL: ${discoveredDatasetHref}`);
-            return;
+            continue;
         }
 
         // =====
@@ -110,7 +113,7 @@ export async function BuildDataSources() {
         // PASSO 7: Construção do objeto do DataSource em memória
         const datasourceTitle = datasetApiData['info']['title'] || '';
         const newDatasource: DataSource = {
-            id: String(discoveredDatasetHrefs.indexOf(discoveredDatasetHref)),
+            tempId: datasetId,
             title: datasourceTitle,
             baseUrl: sanitizeBaseUrl(datasetBaseUrl)
         }
@@ -120,13 +123,9 @@ export async function BuildDataSources() {
         console.log(`\n---\n`);
     }
     await browser.close();
-
-    console.clear();
-    console.log(`[INFO] DataSources construídos: ${builtDataSources.length}!`);
-    console.table(builtDataSources);
     // =====
 
-    await new Promise((resolver) => { setTimeout(resolver, 10000); });
+    return builtDataSources;
 }
 
 async function discoverAvaliableDataSets(ckanMainPageBaseUrl: URL): Promise<string[] | null> {
@@ -303,39 +302,113 @@ async function BuildDatasetApiPortalUrl(discoveredDatasetApiDocPageUrl: string):
     return null;
 }
 
-export async function GetDatasetApiData(discoveredDatasetApiPortalUrl: string, browser: Browser) {
+// Higienizador que conserta quebras de linha dentro de strings no YAML do governo
+function sanitizeMalformedYaml(yamlString: string): string {
+    const regex = /([a-zA-Z0-9_]+:\s*")((?:[^"\\]|\\.)*)(")/g;
+
+    return yamlString.replace(regex, (match, inicio, conteudo, fim) => {
+        const conteudoLimpo = conteudo.replace(/\r?\n/g, ' ');
+        return inicio + conteudoLimpo + fim;
+    });
+}
+
+async function GetDatasetApiData(discoveredDatasetApiPortalUrl: string, browser: Browser) {
     const newPage = await browser.newPage();
 
     try {
-        // 1. Simula um navegador real para evitar bloqueios de segurança
         await newPage.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         );
 
         let apiSpecEncontrada: any = null;
 
-        // 2. Analisa o conteúdo de cada pacote recebido na rede
+        // Helper interno para validar e tentar parsear o texto capturado em JSON ou YAML
+        const tentarParsearSpec = (text: string, sourceUrl: string): boolean => {
+            if (!text || apiSpecEncontrada) return false;
+
+            // Validação do CONTEÚDO: procura as palavras-chave vitais do esquema OpenAPI/Swagger
+            const temEstruturaSwagger =
+                text.includes('"openapi"') ||
+                text.includes('"swagger"') ||
+                text.includes('openapi:') ||
+                text.includes('swagger:') ||
+                text.includes('"paths"') ||
+                text.includes('paths:');
+
+            if (!temEstruturaSwagger) return false;
+
+            // 1ª Tentativa: JSON
+            try {
+                const parsed = JSON.parse(text);
+                // Confirmação extra se é realmente um objeto de especificação do OpenAPI/Swagger
+                if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
+                    apiSpecEncontrada = parsed;
+                    console.log(`[SUCESSO] Especificação capturada na URL: ${sourceUrl}`);
+                    console.log(`[INFO] Convertido de JSON com sucesso`);
+                    return true;
+                }
+            } catch {
+                // 2ª Tentativa: YAML Perfeito
+                try {
+                    const parsed = YAML.parse(text);
+                    if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
+                        apiSpecEncontrada = parsed;
+                        console.log(`[SUCESSO] Especificação capturada na URL: ${sourceUrl}`);
+                        console.log(`[INFO] Convertido de YAML com sucesso`);
+                        return true;
+                    }
+                } catch {
+                    // 3ª Tentativa: YAML Quebrado/Sujo
+                    try {
+                        const textLimpo = sanitizeMalformedYaml(text);
+                        const parsed = YAML.parse(textLimpo);
+                        if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
+                            apiSpecEncontrada = parsed;
+                            console.log(`[SUCESSO] Especificação capturada na URL: ${sourceUrl}`);
+                            console.log(`[INFO] Convertido de YAML (Higienizado) com sucesso!`);
+                            return true;
+                        }
+                    } catch {
+                        return false;
+                    }
+                }
+            }
+            return false;
+        };
+
+        // -------------------------------------------------------------
+        // ESTRATÉGIA 1: Interceptador de Rede (Passivo Ampliado)
+        // -------------------------------------------------------------
         newPage.on('response', async (response) => {
-            // Se já capturamos a especificação, não precisamos continuar processando outras requisições
+            // Se já encontrou a especificação, ignora qualquer outra resposta da rede
             if (apiSpecEncontrada) return;
 
             try {
-                const request = response.request();
-                const requestType = request.resourceType();
                 const url = response.url().toLowerCase();
+                if (response.status() !== 200) return;
 
-                // Filtra apenas requisições de dados (XHR/Fetch) ativas e com status de sucesso (200 OK)
-                const isDataRequest = requestType === 'xhr' || requestType === 'fetch';
-                if (!isDataRequest || response.status() !== 200) return;
+                // FILTRO ANTI-FALSO POSITIVO: Ignora scripts (.js), folhas de estilo (.css) e imagens
+                const isStaticAsset =
+                    url.endsWith('.js') ||
+                    url.endsWith('.css') ||
+                    url.endsWith('.png') ||
+                    url.endsWith('.jpg') ||
+                    url.endsWith('.woff2') ||
+                    url.includes('swagger-ui-bundle') ||
+                    url.includes('swagger-ui-standalone');
 
-                // Pegamos os cabeçalhos da RESPOSTA do servidor
+                if (isStaticAsset) return;
+
                 const responseHeaders = response.headers();
-                const contentType = responseHeaders['content-type'] || '';
+                const contentType = (responseHeaders['content-type'] || '').toLowerCase();
 
-                // Checamos se a URL OU se o tipo do conteúdo entrega/é JSON/YAML
+                // Ignora explicitamente tipos de script JS
+                if (contentType.includes('javascript') || contentType.includes('css')) return;
+
                 const isJsonOrYaml =
                     contentType.includes('application/json') ||
-                    contentType.includes('text/yaml') ||
+                    contentType.includes('yaml') ||
+                    contentType.includes('text/plain') ||
                     contentType.includes('application/x-yaml');
 
                 const hasUrlHint =
@@ -343,66 +416,86 @@ export async function GetDatasetApiData(discoveredDatasetApiPortalUrl: string, b
                     url.includes('openapi') ||
                     url.includes('api-docs') ||
                     url.endsWith('.json') ||
-                    url.endsWith('.yaml');
+                    url.endsWith('.yaml') ||
+                    url.endsWith('.yml');
 
-                // Se a resposta for potencial de conter dados de API
                 if (isJsonOrYaml || hasUrlHint) {
                     const text = await response.text();
-
-                    // Validação do CONTEÚDO: procura as palavras-chave vitais do esquema OpenAPI/Swagger
-                    const temEstruturaSwagger =
-                        text.includes('"openapi"') ||
-                        text.includes('"swagger"') ||
-                        text.includes('openapi:') ||
-                        text.includes('swagger:') ||
-                        text.includes('"paths"');
-
-                    if (temEstruturaSwagger) {
-                        console.log(`[SUCESSO] Especificação capturada na URL: ${response.url()}`);
-
-                        try {
-                            // 1ª Tentativa: JSON
-                            apiSpecEncontrada = JSON.parse(text);
-                            console.log(`[INFO] Convertido de JSON com sucesso`);
-
-                        } catch (jsonError) {
-
-                            try {
-                                // 2ª Tentativa: YAML Perfeito
-                                apiSpecEncontrada = YAML.parse(text);
-                                console.log(`[INFO] Convertido de YAML com sucesso`);
-
-                            } catch (yamlError) {
-
-                                // 3ª Tentativa: YAML Quebrado/Sujo (O Fallback para o caso de Custos)
-                                console.log(`[AVISO] YAML malformado detectado! Tentando higienizar o texto...`);
-
-                                try {
-                                    const textLimpo = sanitizeMalformedYaml(text);
-                                    apiSpecEncontrada = YAML.parse(textLimpo);
-                                    console.log(`[INFO] Convertido de YAML (Higienizado) com sucesso!`);
-
-                                } catch (finalError) {
-                                    console.error(`[ERRO FATAL] O arquivo está tão quebrado que não pôde ser recuperado.`);
-                                    console.error(finalError);
-                                }
-                            }
-                        }
-                    }
+                    tentarParsearSpec(text, response.url());
                 }
             } catch {
-                // Ignora erros ao ler respostas individuais para não interromper a execução
+                // Ignora erros ao ler respostas individuais
             }
         });
 
-        // 3. Navega até a URL do portal e aguarda o carregamento das requisições de rede
+        // Navega até a URL do portal
         await newPage.goto(discoveredDatasetApiPortalUrl, {
             waitUntil: 'networkidle2',
-            timeout: 60000
+            timeout: 60000,
         });
 
-        // Pausa amigável de 2 segundos para dar tempo do script da página processar tudo
         await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // -------------------------------------------------------------
+        // ESTRATÉGIA 2: Fallback Ativo (Garante a captura se a rede não pegar)
+        // -------------------------------------------------------------
+        if (!apiSpecEncontrada) {
+            console.log(`[FALLBACK] Tentando extrair especificação ativamente a partir da URL...`);
+
+            // 1. Garante HTTPS e remove o trecho da hashtag e barras finais
+            let cleanUrl = discoveredDatasetApiPortalUrl.split('#')[0]?.replace(/\/+$/, '') || '';
+            cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+
+            const candidateUrls = [
+                `${cleanUrl}.yaml`,
+                `${cleanUrl}.json`,
+                `${cleanUrl}.yml`,
+            ];
+
+            for (const candidateUrl of candidateUrls) {
+                if (apiSpecEncontrada) break;
+
+                try {
+                    console.log(`[FALLBACK] Executando fetch ativo em: ${candidateUrl}`);
+
+                    const fetchResult = await newPage.evaluate(async (targetUrl) => {
+                        try {
+                            // Força a opção redirect: 'follow' para seguir redirecionamentos 301/302 do governo
+                            const res = await fetch(targetUrl, { redirect: 'follow' });
+                            if (res.ok) return await res.text();
+                        } catch {
+                            return null;
+                        }
+                        return null;
+                    }, candidateUrl);
+
+                    if (fetchResult) {
+                        tentarParsearSpec(fetchResult, candidateUrl);
+                    }
+                } catch {
+                    // Passa para a próxima URL candidata
+                }
+            }
+        }
+
+        // Se o fetch DENTRO do navegador falhou por políticas de CORS/Mixed Content,
+        // faz o fetch diretamente pelo Node.js (que ignora bloqueios de navegador)
+        if (!apiSpecEncontrada && discoveredDatasetApiPortalUrl) {
+            console.log(`[FALLBACK NODE] Tentando busca direta via HTTP fora do navegador...`);
+
+            const baseUrlPart = (discoveredDatasetApiPortalUrl || '').split('#')[0] || '';
+            const candidateUrl = baseUrlPart.replace(/\/+$/, '').replace(/^http:\/\//i, 'https://') + '.yaml';
+
+            try {
+                const response = await fetch(candidateUrl);
+                if (response.ok) {
+                    const text = await response.text();
+                    tentarParsearSpec(text, candidateUrl);
+                }
+            } catch (nodeFetchError) {
+                console.log(`[FALLBACK NODE] Falha na busca direta via Node:`, nodeFetchError);
+            }
+        }
 
         return apiSpecEncontrada;
 
@@ -410,7 +503,6 @@ export async function GetDatasetApiData(discoveredDatasetApiPortalUrl: string, b
         console.log(`[ERRO: GetDatasetApiData] Falha ao processar URL: ${discoveredDatasetApiPortalUrl}\nDetalhes: ${error}`);
         return null;
     } finally {
-        // 4. Sempre fecha a aba do navegador para não vazar memória RAM
         await newPage.close();
     }
 }
@@ -422,19 +514,6 @@ async function LoadAxios(pageUrl: string): Promise<AxiosResponse | null> {
         console.log(`[ERRO] Falha no método LoadAxios!\n${error}`)
         return null;
     }
-}
-
-// Higienizador para consertar YAMLs malformados do governo
-function sanitizeMalformedYaml(yamlString: string) {
-    // Procura por padrões como: chave: "qualquer texto"
-    // O regex considera strings que podem até ter aspas escapadas (\") dentro
-    const regex = /([a-zA-Z0-9_]+:\s*")((?:[^"\\]|\\.)*)(")/g;
-
-    return yamlString.replace(regex, (match, inicio, conteudo, fim) => {
-        // Substitui a quebra de linha real (Enter) por um espaço
-        const conteudoLimpo = conteudo.replace(/\r?\n/g, ' ');
-        return inicio + conteudoLimpo + fim;
-    });
 }
 
 function sanitizeBaseUrl(rawUrl: string): string {
