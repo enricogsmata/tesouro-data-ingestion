@@ -6,6 +6,7 @@ import * as cheerio from 'cheerio';
 import puppeteer, { Browser } from "puppeteer";
 import YAML from 'yaml';
 import { YAMLError } from "yaml";
+import type { DataSource } from "./models.js";
 
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
 const BASE_CKAN_PATH: string = '/ckan/dataset'
@@ -27,6 +28,7 @@ export async function BuildDataSources() {
     console.table(discoveredDatasetHrefs);
     // =====
     const browser = await puppeteer.launch({ headless: true });
+    let builtDataSources: DataSource[] = [];
     for (const discoveredDatasetHref of discoveredDatasetHrefs) {
         // PASSO 2. Montagem dos URLs da página de cada dataset encontrado no PASSO 1
         let datasetPageUrl: string | null = await BuildDatasetPageUrl(discoveredDatasetHref, ckanMainPageBaseUrl)
@@ -88,26 +90,43 @@ export async function BuildDataSources() {
             continue;
         }
 
-        const baseUrl = datasetApiData['host'] || datasetApiData['servers'][0]['url'];
+        const datasetBaseUrl = datasetApiData['host'] || datasetApiData['servers'][0]['url'];
 
-        if (!baseUrl) {
+        if (!datasetBaseUrl) {
             console.log(`[ERRO: PASSO 6] Não foi possível obter a URL base do dataset.\n${discoveredDatasetHref}`);
             return;
         }
 
-        console.log(`\n[5 | DATA] URL base: ${baseUrl}`);
+        console.log(`\n[5 | DATA] URL base: ${datasetBaseUrl}`);
 
         if (!datasetApiData['paths']) {
             console.log(`[ERRO: PASSO 6] Não foram encontrados paths (endpoints) para a url do dataset.\nURL: ${discoveredDatasetHref}`);
             return;
         }
 
+        // =====
+
+        // =====
+        // PASSO 7: Construção do objeto do DataSource em memória
+        const datasourceTitle = datasetApiData['info']['title'] || '';
+        const newDatasource: DataSource = {
+            id: String(discoveredDatasetHrefs.indexOf(discoveredDatasetHref)),
+            title: datasourceTitle,
+            baseUrl: sanitizeBaseUrl(datasetBaseUrl)
+        }
+
+        builtDataSources.push(newDatasource);
+
         console.log(`\n---\n`);
     }
     await browser.close();
 
+    console.clear();
+    console.log(`[INFO] DataSources construídos: ${builtDataSources.length}!`);
+    console.table(builtDataSources);
     // =====
 
+    await new Promise((resolver) => { setTimeout(resolver, 10000); });
 }
 
 async function discoverAvaliableDataSets(ckanMainPageBaseUrl: URL): Promise<string[] | null> {
@@ -416,4 +435,20 @@ function sanitizeMalformedYaml(yamlString: string) {
         const conteudoLimpo = conteudo.replace(/\r?\n/g, ' ');
         return inicio + conteudoLimpo + fim;
     });
+}
+
+function sanitizeBaseUrl(rawUrl: string): string {
+    let url = rawUrl.trim();
+
+    // 1. Garante o protocolo https:// se não houver http:// ou https://
+    if (!/^https?:\/\//i.test(url)) {
+        url = `https://${url}`;
+    }
+
+    // 2. Remove barras no final para padronizar a concatenação depois
+    return url.replace(/\/+$/, '');
+
+    // Exemplos de resultado:
+    // "apidatalake.tesouro.gov.br/ords/..." -> "https://apidatalake.tesouro.gov.br/ords/..."
+    // "https://apiapex.tesouro.gov.br/aria/" -> "https://apiapex.tesouro.gov.br/aria"
 }
