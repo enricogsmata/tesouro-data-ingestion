@@ -5,7 +5,6 @@ import axios, { type AxiosResponse } from "axios";
 import * as cheerio from 'cheerio';
 import puppeteer, { Browser } from "puppeteer";
 import YAML from 'yaml';
-import { YAMLError } from "yaml";
 import type { DataSource } from "./models.js";
 
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
@@ -46,20 +45,9 @@ export async function BuildDataSources(): Promise<DataSource[] | null> {
         // =====
 
         // =====
-        // PASSO 3. Montagem da chave identificadora do dataset
-        const datasetId = await BuildDatasetId(discoveredDatasetHref);
-
-        if (!datasetId) {
-            console.log(`[ERRO: PASSO 3] O id do dataset não foi gerada corretamente.\nHREF ${discoveredDatasetHref}`);
-            continue;
-        }
-
-        console.log(`\n[2 | DATA] ID do dataset:`)
-        console.table(datasetId);
-        // =====
 
         // =====
-        // PASSO 4. Descoberta do url da página que contém o link para a API do dataset
+        // PASSO 3. Descoberta do url da página que contém o link para a API do dataset
         // * Link da página da documentação da API do dataset
         const datasetApiDocPageUrl = await BuildDatasetApiPageUrl(datasetPageUrl);
 
@@ -73,7 +61,7 @@ export async function BuildDataSources(): Promise<DataSource[] | null> {
         // =====
 
         // =====
-        // PASSO 5. Extração da url efetiva e acesso ao datalake que contém a url base da API e o(s) endpoint(s)
+        // PASSO 4. Extração da url efetiva e acesso ao datalake que contém a url base da API e o(s) endpoint(s)
         const datasetApiPortalUrl = await BuildDatasetApiPortalUrl(datasetApiDocPageUrl);
 
         if (!datasetApiPortalUrl) {
@@ -85,37 +73,46 @@ export async function BuildDataSources(): Promise<DataSource[] | null> {
         // =====
 
         // =====
-        // PASSO 6. Extração dos dados da API e Endpoints do dataset
-        const datasetApiData = await GetDatasetApiData(datasetApiPortalUrl, browser);
+        // PASSO 5. Extração dos dados da API e Endpoints do dataset
+        const datasetApiMetadata = await GetDatasetApiMetadata(datasetApiPortalUrl, browser);
 
-        if (!datasetApiData) {
+        if (!datasetApiMetadata) {
             console.log(`[ERRO: PASSO 6] Não foi possível obter os dados da API e Endpoints do dataset`);
             continue;
         }
 
-        const datasetBaseUrl = datasetApiData['host'] || datasetApiData['servers'][0]['url'];
+        const datasetBaseUrl = datasetApiMetadata['host'] || datasetApiMetadata['servers'][0]['url'];
 
         if (!datasetBaseUrl) {
             console.log(`[ERRO: PASSO 6] Não foi possível obter a URL base do dataset.\n${discoveredDatasetHref}`);
             continue;
         }
 
-        console.log(`\n[5 | DATA] URL base: ${datasetBaseUrl}`);
+        const sanitizedBaseUrl = sanitizeBaseUrl(datasetBaseUrl);
 
-        if (!datasetApiData['paths']) {
+        // ---
+        // Cancelamos o processo caso a URL base encontrada já esteja inserida no vetor de DataSources. A extração coleta todos os endpoints atrelados à uma URL base, reduzindo o número de acessos e removendo duplicatas.
+        // ---
+        if (builtDataSources.some(ds => ds.baseUrl === sanitizedBaseUrl)) {
+            console.log(`[SKIP] URL Base já processada!`);
+            continue;
+        }
+
+        console.log(`\n[5 | DATA] URL base: ${sanitizedBaseUrl}`);
+
+        if (!datasetApiMetadata['paths']) {
             console.log(`[ERRO: PASSO 6] Não foram encontrados paths (endpoints) para a url do dataset.\nURL: ${discoveredDatasetHref}`);
             continue;
         }
 
         // =====
-
-        // =====
-        // PASSO 7: Construção do objeto do DataSource em memória
-        const datasourceTitle = datasetApiData['info']['title'] || '';
+        // PASSO 6: Construção do objeto do DataSource em memória
+        const datasourceTitle = datasetApiMetadata['info']['title'] || '';
         const newDatasource: DataSource = {
-            tempId: datasetId,
+            tempId: discoveredDatasetHrefs.indexOf(discoveredDatasetHref),
             title: datasourceTitle,
-            baseUrl: sanitizeBaseUrl(datasetBaseUrl)
+            baseUrl: sanitizedBaseUrl,
+            metadata: datasetApiMetadata
         }
 
         builtDataSources.push(newDatasource);
@@ -312,7 +309,7 @@ function sanitizeMalformedYaml(yamlString: string): string {
     });
 }
 
-async function GetDatasetApiData(discoveredDatasetApiPortalUrl: string, browser: Browser) {
+async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, browser: Browser) {
     const newPage = await browser.newPage();
 
     try {

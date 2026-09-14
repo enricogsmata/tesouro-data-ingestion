@@ -1,8 +1,9 @@
 // 1. Origem da API
 export interface DataSource {
-  tempId: string;
+  tempId: number;
   title: string;
   baseUrl: string;
+  metadata: string;
 }
 
 // 2. Metadados do Endpoint
