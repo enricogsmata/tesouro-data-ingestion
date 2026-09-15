@@ -6,12 +6,14 @@ export interface DataSource {
   metadata: string;
 }
 
+export type HttpMethod = 'get' | 'post' | 'put' | 'delete' | 'patch';
+
 // 2. Metadados do Endpoint
 export interface Endpoint {
   id: string;
   dataSourceId: string;
   path: string;
-  method: 'get' | 'post' | 'put' | 'delete' | 'patch';
+  method: HttpMethod;
   summary?: string | null;
   description?: string | null;
   tags?: string[];
