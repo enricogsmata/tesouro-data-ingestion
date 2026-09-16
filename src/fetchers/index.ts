@@ -59,8 +59,12 @@ async function EndpointFetcher(fullUrl: string) {
             return;
         }
         // - - -
-
+        
         // - LOG -
+        if (response.data['items']?.length == 0) {
+            logger.write(`\n[WARN] Endpoint vazio/sem itens!`);
+        }
+        
         logger.write(`\n${JSON.stringify(response.data, null, 2)}\n`);
         // - - -
     } catch (error: any) {
