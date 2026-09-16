@@ -6,9 +6,9 @@ import * as cheerio from 'cheerio';
 import puppeteer, { Browser } from "puppeteer";
 import YAML from 'yaml';
 import type { DataSource } from "./models.js";
-import { DS_DISCOVERY_LOGS_DIR as logsDir } from "../logs/types.js";
+import { DISCOVERY_LOGS_DIR as logsDir } from "../logs/types.js";
+import { createWriter } from "../logs/logic.js";
 import path from "path";
-import * as fs from 'fs';
 
 // - URL/PATH base utilizados na descoberta dos conjuntos de dados -
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
@@ -20,9 +20,9 @@ const errorsPath = path.join(logsDir, `discovery_errors_${Date.now()}.log`);
 const fullLogPath = path.join(logsDir, `full_log_${Date.now()}.log`);
 const processedDataPath = path.join(logsDir, `data_${Date.now()}.log`);
 
-const errorsLogger = fs.createWriteStream(errorsPath, { flags: 'w' });
-const fullLogLogger = fs.createWriteStream(fullLogPath, { flags: 'w' });
-const processedDataLogger = fs.createWriteStream(processedDataPath, {flags: 'w'});
+const errorsLogger = createWriter(errorsPath);
+const fullLogLogger = createWriter(fullLogPath);
+const processedDataLogger = createWriter(processedDataPath);
 // - - -
 
 /*
@@ -157,7 +157,7 @@ export async function BuildDataSources(): Promise<DataSource[] | null> {
         // [TASK 6] Construção do objeto do conjunto de dados (DataSource) em memória e inserção no vetor
         const datasourceTitle = datasetApiMetadata['info']['title'] || '';
         const newDatasource: DataSource = {
-            tempId: discoveredDatasetHrefs.indexOf(discoveredDatasetHref),
+            tempId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()-Math.random()}`,
             title: datasourceTitle,
             baseUrl: sanitizedBaseUrl,
             metadata: datasetApiMetadata
@@ -625,7 +625,7 @@ function sanitizeBaseUrl(rawUrl: string): string {
     }
 
     // 2. Remove barras no final para padronizar a concatenação depois
-    return url.replace(/\/+$/, '');
+    return url;
 
     // Exemplos de resultado:
     // "apidatalake.tesouro.gov.br/ords/..." -> "https://apidatalake.tesouro.gov.br/ords/..."

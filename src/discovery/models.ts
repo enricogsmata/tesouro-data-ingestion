@@ -1,6 +1,6 @@
 // 1. Origem da API
 export interface DataSource {
-  tempId: number;
+  tempId: string;
   title: string;
   baseUrl: string;
   metadata: string;

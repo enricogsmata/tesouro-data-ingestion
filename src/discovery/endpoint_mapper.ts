@@ -21,11 +21,14 @@ export function MapDiscoveredEndpointsInMemory(dataSources: DataSource[]): Endpo
 
                 if (!HTTP_METHODS.includes(method)) continue;
 
+                // > Realizamos a sanitização do 'path' para torná-lo integrável à url base da api, evitando inconsistências
+                const sanitizedPath = path.startsWith('/') ? path.slice(1) : path;
+
                 const newEndpoint: Endpoint = {
                     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-                    dataSourceId: dataSource.tempId.toString(),
+                    dataSourceId: dataSource.tempId,
                     method: method,
-                    path: path,
+                    path: sanitizedPath,
                     description: methodObj?.description || "",
                     summary: methodObj?.summary || "",
                     tags: methodObj?.tags || []

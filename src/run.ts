@@ -3,13 +3,15 @@
 */
 import * as fs from 'fs';
 import path from 'path';
-import { DS_DISCOVERY_LOGS_DIR as logsDir } from './logs/types.js';
-import { BuildDataSources } from "./datasource/discovery.js";
-import { MapDiscoveredEndpointsInMemory } from "./datasource/endpoint_mapper.js";
-import { buildDefaultLogsDir } from "./logs/logic.js";
-import type { DataSource, Endpoint } from "./datasource/models.js";
+import { DISCOVERY_LOGS_DIR as logsDir } from './logs/types.js';
+import { BuildDataSources } from "./discovery/discovery.js";
+import { MapDiscoveredEndpointsInMemory } from "./discovery/endpoint_mapper.js";
+import { buildDefaultLogsDir, createWriter } from "./logs/logic.js";
+import type { DataSource, Endpoint } from "./discovery/models.js";
+import { EndpointFetcherOrchestrator } from './fetchers/index.js';
 
 // - LOG -
+console.clear();
 console.log("[STATUS] Iniciando script...");
 // - - -
 
@@ -20,8 +22,8 @@ buildDefaultLogsDir();
 const runLogsFile = path.join(logsDir, `run_logs_${Date.now()}.log`);
 const runErrorsFile = path.join(logsDir, `run_errors_${Date.now()}.log`);
 
-const dataLogger = fs.createWriteStream(runLogsFile, {flags: 'w'});
-const errorsLogger = fs.createWriteStream(runErrorsFile, {flags: 'w'});
+const dataLogger = createWriter(runLogsFile);
+const errorsLogger = createWriter(runErrorsFile);
 // - - -
 
 
@@ -68,5 +70,15 @@ if (!endpoints) {
 // - LOG -
 dataLogger.write(`\n[INFO] Endpoints mapeados: ${endpoints.length}!\n`);
 dataLogger.write(JSON.stringify(endpoints, null, 2) + '\n');
+// - - -
+
+
+
+// - Requisições nos Endpoints -
+
+// > Requisição em cada endpoint e coleta dos responses
+await EndpointFetcherOrchestrator(dataSources, endpoints);
+
+// - LOG -
 console.log("[STATUS] Script concluído!");
 // - - -
