@@ -1,16 +1,19 @@
-import axios from "axios";
+// run-debug.ts
+console.log('1. Iniciando teste de imports...');
 
-try {
-    const response = await axios.get('https://apidatalake.tesouro.gov.br/ords/cdwhprd/sadipem/tt/res-cronograma-pagamentos', {
-        params: {
-            limit: 50,
-            offset: 0
-        }
-    });
+console.log('2. Carregando dbConnection...');
+const { db } = await import('./src/database/dbConnection.js');
 
-    if (response.status == 200) {
-        console.log(response.data);
-    }
-} catch (error) {
-    console.log("[ERRO] Erro: \n", error)
-}
+console.log('3. Carregando logger...');
+const { createAppLogger } = await import('./src/logs/logic.js');
+
+console.log('4. Carregando discovery...');
+const { BuildDataSources } = await import('./src/discovery/discovery.js');
+
+console.log('5. Carregando endpoint_mapper...');
+const { MapDiscoveredEndpointsInMemory } = await import('./src/discovery/endpoint_mapper.js');
+
+console.log('6. Carregando fetchers...');
+const { EndpointFetcherOrchestrator } = await import('./src/fetchers/index.js');
+
+console.log('Todos os imports foram carregados com sucesso!');

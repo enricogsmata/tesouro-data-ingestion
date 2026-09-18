@@ -1,29 +1,22 @@
-/*
-    > Arquivo responsável por executar o fluxo da aplicação COM LOGS EM ARQUIVOS (.log)
-*/
-import * as fs from 'fs';
 import path from 'path';
-import { DISCOVERY_LOGS_DIR as logsDir } from './logs/types.js';
 import { BuildDataSources } from "./discovery/discovery.js";
 import { MapDiscoveredEndpointsInMemory } from "./discovery/endpoint_mapper.js";
-import { buildDefaultLogsDir, createWriter } from "./logs/logic.js";
-import type { DataSource, Endpoint } from "./discovery/models.js";
+import { db } from './database/dbConnection.js';
+import type { IDataSource } from './database/models/datasource/models.js';
+import type { IRawEndpoint } from './database/models/endpoint/models.js';
 import { EndpointFetcherOrchestrator } from './fetchers/index.js';
-
-// - LOG -
-console.clear();
-console.log("[STATUS] Iniciando script...");
-// - - -
+import { createAppLogger } from "./logs/logic.js";
+import { fileURLToPath } from 'url';
 
 // - LOOGER -
-// > Constrói a estrutura necessária para armazenar os logs
-buildDefaultLogsDir();
+const module = path.basename(fileURLToPath(import.meta.url));
+const context = 'run.ts';
 
-const runLogsFile = path.join(logsDir, `run_logs_${Date.now()}.log`);
-const runErrorsFile = path.join(logsDir, `run_errors_${Date.now()}.log`);
+const logger = createAppLogger(db);
+// - - -
 
-const dataLogger = createWriter(runLogsFile);
-const errorsLogger = createWriter(runErrorsFile);
+// - LOG -
+logger.info({module: module, context: context}, "[STATUS] Iniciando script...");
 // - - -
 
 
@@ -31,22 +24,22 @@ const errorsLogger = createWriter(runErrorsFile);
 // - DataSources Seed -
 
 // - LOG -
-console.log(`> Descobrindo conjuntos de dados...`);
+logger.info(`> Descobrindo conjuntos de dados...`);
 // - - -
 
 // > Realiza o seed dos conjuntos de dados em memória
-const dataSources: DataSource[] | null = await BuildDataSources();
+const DataSources: IDataSource[] | null = await BuildDataSources();
 
 // - ERRO -
-if (!dataSources) {
-    errorsLogger.write("[ERRO | RUN] Falha no seed dos data sources!\n")
+if (!DataSources) {
+    logger.fatal({module: module, context: context, data: JSON.stringify(DataSources, null, 2)}, "[ERRO] Falha no seed dos data sources!");
     throw new Error("[ERRO | RUN] Falha no seed dos data sources!");
 }
 // - - -
 
 // - LOG -
-dataLogger.write(`[INFO] DataSources construídos: ${dataSources.length}!\n`);
-dataLogger.write(JSON.stringify(dataSources, null, 2) + '\n');
+logger.debug({module: module, context: context}, `[DEBUG] DataSources construídos: ${DataSources.length}!`);
+logger.debug({module: module, context: context, data: JSON.stringify(DataSources, null, 2)}, `[DEBUG] Datasources:`);
 // - - -
 
 
@@ -54,22 +47,21 @@ dataLogger.write(JSON.stringify(dataSources, null, 2) + '\n');
 // - EndPoints Seed -
 
 // - LOG -
-console.log(`> Descobrindo endpoints...`);
+logger.info({module: module, context: context , msg:`> Descobrindo endpoints...`});
 // - - -
 
 // > Mapeamento de cada endpoint através dos metadados dos conjuntos de dados encontrados
-const endpoints: Endpoint[] = MapDiscoveredEndpointsInMemory(dataSources);
+const endpoints: IRawEndpoint[] = MapDiscoveredEndpointsInMemory(DataSources);
 
 // - ERRO -
 if (!endpoints) {
-    errorsLogger.write("[ERRO | RUN] Falha no mapeamento dos endpoints!\n");
-    throw new Error("[ERRO | RUN] Falha no mapeamento dos endpoints!");
+    logger.error({module: module, context: context, data: JSON.stringify(endpoints, null, 2)}, "[ERRO] Falha no mapeamento dos endpoints!", );
 }
 // - - -
 
 // - LOG -
-dataLogger.write(`\n[INFO] Endpoints mapeados: ${endpoints.length}!\n`);
-dataLogger.write(JSON.stringify(endpoints, null, 2) + '\n');
+logger.debug({module: module, context: context}, `[DEBUG] Endpoints mapeados: ${endpoints.length}!`);
+logger.debug({module: module, context: context, data: JSON.stringify(endpoints, null, 2)}, `[DEBUG] Endpoints: `);
 // - - -
 
 
@@ -77,8 +69,9 @@ dataLogger.write(JSON.stringify(endpoints, null, 2) + '\n');
 // - Requisições nos Endpoints -
 
 // > Requisição em cada endpoint e coleta dos responses
-await EndpointFetcherOrchestrator(dataSources, endpoints);
+await EndpointFetcherOrchestrator(DataSources, endpoints);
 
 // - LOG -
-console.log("[STATUS] Script concluído!");
+logger.info({module: module, context: context}, "[STATUS] Script concluído!");
+logger.flush();
 // - - -
