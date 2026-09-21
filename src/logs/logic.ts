@@ -9,10 +9,11 @@ export function createAppLogger(db: BetterSQLite3Database<Record<string, never>>
     const dbStream = new Writable({
         write(chunk, encoding, callback) {
             try {
-                const logObject: Log = JSON.parse(chunk);
+                const logObject: Log = JSON.parse(chunk.toString());
                 const logLevel = logObject.level ? parseLogLevel(logObject.level) : 'UNDEFINED';
-
+                console.log(logObject.level ?? '');
                 if (logObject.level && logObject.level >= 40) {
+                    console.log('ENTROU!!!!!!!!!!!!!!')
                     db.insert(logs).values({
                         message: logObject.msg || 'EMPTY',
                         data: logObject.data || null,
@@ -22,9 +23,8 @@ export function createAppLogger(db: BetterSQLite3Database<Record<string, never>>
                         generatedAt: String(logObject.time ?? Date.now()),
                     }).run();
                 }
-
             } catch (error) {
-
+                console.error("Erro ao inserir log no banco:", error);
             }
             callback();
         }
