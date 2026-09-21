@@ -11,9 +11,8 @@ export function createAppLogger(db: BetterSQLite3Database<Record<string, never>>
             try {
                 const logObject: Log = JSON.parse(chunk.toString());
                 const logLevel = logObject.level ? parseLogLevel(logObject.level) : 'UNDEFINED';
-                console.log(logObject.level ?? '');
+
                 if (logObject.level && logObject.level >= 40) {
-                    console.log('ENTROU!!!!!!!!!!!!!!')
                     db.insert(logs).values({
                         message: logObject.msg || 'EMPTY',
                         data: logObject.data || null,
@@ -60,5 +59,4 @@ function parseLogLevel(level: number): LOG_LEVELS {
         logLevel = 'FATAL';
 
     return logLevel;
-
 }

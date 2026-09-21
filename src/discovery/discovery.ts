@@ -5,12 +5,12 @@ import axios, { type AxiosResponse } from "axios";
 import * as cheerio from 'cheerio';
 import puppeteer, { Browser } from "puppeteer";
 import YAML from 'yaml';
-import type { IDataSource } from "../database/models/datasource/models.js";
 import path from "path";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { fileURLToPath } from "url";
 import { db } from "../database/dbConnection.js";
 import { createAppLogger } from "../logs/logic.js";
+import type { NewDataSource } from "../database/types.js";
 
 // - URL/PATH base utilizados na descoberta dos conjuntos de dados -
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
@@ -30,10 +30,10 @@ const logger = createAppLogger(db);
     > Opera através de 5 etapas modulares consultando as páginas do portal do Tesouro e extraíndo URLs/Dados de cada API/Endpoints
     > Retorna uma lista de objetos IDataSource tipados
 */
-export async function BuildDataSources(): Promise<IDataSource[] | null> {
+export async function BuildDataSources(): Promise<NewDataSource[] | null> {
     const context = 'BuildDataSources';
 
-    logger.info({module: module, context: context}, `[INFO] Iniciando descoberta de IDataSources...`);
+    logger.info({module: module, context: context}, `[INFO] Iniciando descoberta de conjuntos de dados...`);
 
     // [TASK 1] Descoberta dos datasets disponíveis na página principal dos datasets no CKAN do Tesouro
     // > Adicionado o search para filtrar por datasets com API disponível
@@ -59,7 +59,7 @@ export async function BuildDataSources(): Promise<IDataSource[] | null> {
         > Cada loop, excluindo conjuntos de dados com base duplicada/erro, constrói um IDataSource
     */
     const browser = await puppeteer.launch({ headless: true });
-    let builtIDataSources: IDataSource[] = [];
+    let builtDataSources: NewDataSource[] = [];
 
     for (const discoveredDatasetHref of discoveredDatasetHrefs) {
         // [TASK 2] Extração do URL da página do conjunto de dados descoberto
@@ -131,7 +131,7 @@ export async function BuildDataSources(): Promise<IDataSource[] | null> {
 
         // > Cancelamos o processo caso a URL base encontrada já esteja inserida no vetor de conjuntos de dados obtidos.
         // ! Isso evita consulta à mesma API/Endpoints de modo desnecessário/duplicado, economizando processamento e tratamento de dados futuro.
-        if (builtIDataSources.some(ds => ds.baseUrl === sanitizedBaseUrl)) {
+        if (builtDataSources.some(ds => ds.baseUrl === sanitizedBaseUrl)) {
             logger.debug({module: module, context: context, data: sanitizedBaseUrl}, `[SKIP] URL Base já processada!`);
             continue;
         }
@@ -149,21 +149,20 @@ export async function BuildDataSources(): Promise<IDataSource[] | null> {
 
         // [TASK 6] Construção do objeto do conjunto de dados (IDataSource) em memória e inserção no vetor
         const IDataSourceTitle = datasetApiMetadata['info']['title'] || '';
-        const newIDataSource: IDataSource = {
-            tempId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now() - Math.random()}`,
+        const newIDataSource: NewDataSource = {
             title: IDataSourceTitle,
             baseUrl: sanitizedBaseUrl,
-            metadata: datasetApiMetadata
+            rawMetadata: JSON.stringify(datasetApiMetadata)
         }
 
-        builtIDataSources.push(newIDataSource);
+        builtDataSources.push(newIDataSource);
     }
     // > FECHAMENTO DO BROWSER DO PUPPETEER
     await browser.close();
     // - - -
 
     // > Retorna a lista de conjuntos de dados construídos
-    return builtIDataSources;
+    return builtDataSources;
 }
 
 /*
@@ -388,7 +387,7 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                 if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
                     apiSpecEncontrada = parsed;
                     logger.debug({module: module, context: context, data: `${sourceUrl}`}, `[SUCESSO] Especificação capturada na URL.`);
-                    logger.info({module: module, context: context}, `[INFO] Convertido de JSON com sucesso`);
+                    logger.trace({module: module, context: context}, `[INFO] Convertido de JSON com sucesso`);
                     return true;
                 }
             } catch {
@@ -398,7 +397,7 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                     if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
                         apiSpecEncontrada = parsed;
                         logger.debug({module: module, context: context, data: `${sourceUrl}`}, `[SUCESSO] Especificação capturada na URL`);
-                        logger.info({module: module, context: context}, `[INFO] Convertido de YAML com sucesso`);
+                        logger.trace({module: module, context: context}, `[INFO] Convertido de YAML com sucesso`);
                         return true;
                     }
                 } catch {
@@ -409,7 +408,7 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                         if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
                             apiSpecEncontrada = parsed;
                             logger.debug({module: module, context: context, data: `${sourceUrl}`}, `[SUCESSO] Especificação capturada na URL.`);
-                            logger.info({module: module, context: context}, `[INFO] Convertido de YAML (Higienizado) com sucesso!`);
+                            logger.trace({module: module, context: context}, `[INFO] Convertido de YAML (Higienizado) com sucesso!`);
                             return true;
                         }
                     } catch {

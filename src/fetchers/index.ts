@@ -1,33 +1,34 @@
 import path from "path";
-import type { IDataSource } from "../database/models/datasource/models.js";
-import { type IRawEndpoint, type IApiResponse, type ApiLink } from "../database/models/endpoint/models.js";
 import axios from "axios";
 import { createAppLogger } from "../logs/logic.js";
 import { db } from "../database/dbConnection.js";
 import { fileURLToPath } from "url";
+import { ApiLinks, RawEndpointResponse } from "../database/schema.js";
+import type { DataSource, Endpoint, IApiResponse, NewApiLink } from "../database/types.js";
 
 // - LOGGER -
+console.clear();
 const module = path.basename(fileURLToPath(import.meta.url));
 
 const logger = createAppLogger(db);
 // - - -
 
-export async function EndpointFetcherOrchestrator(DataSources: IDataSource[], endpoints: IRawEndpoint[]) {
+export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[]) {
     // - LOG -
     const context = `EndpointFetcherOrchestrator`;
-    logger.debug({module: module, context: context, data: `${endpoints.length}`}, `[DATA] Endpoints à serem processados.`);
+    logger.debug({ module: module, context: context, data: `${endpoints.length}` }, `[DATA] Endpoints à serem processados.`);
     // - - -
     for (const endpoint of endpoints) {
         // - LOG -
-        logger.debug({module: module, context: context}, `[${endpoints.indexOf(endpoint) + 1} | LOOP] Endpoint sendo processado: ${endpoint.path}...`);
+        logger.debug({ module: module, context: context }, `[${endpoints.indexOf(endpoint) + 1} | LOOP] Endpoint sendo processado: ${endpoint.path}...`);
         // - - -
 
-        const baseUrl: string = DataSources.find(ds => ds.tempId === endpoint.IDataSourceTempId)?.baseUrl || '';
-        const path: string = endpoint.path || '';
+        const baseUrl: string = DataSources.find(ds => ds.id === endpoint.dataSourceId)?.baseUrl || '';
+        const path: string = endpoint.path || 'Sem Descrição';
 
         // - ERRO -
         if (!baseUrl || !path) {
-            logger.error({module: module, context: context, data: `[BASE URL: ${baseUrl} | PATH: ${path}] | [DataSource: ${DataSources.find(ds => ds.tempId === endpoint.IDataSourceTempId)}`}, `[ERRO] Base Url ou Path não encontrados!`);
+            logger.error({ module: module, context: context, data: `[BASE URL: ${baseUrl} | PATH: ${path}] | [DataSource: ${DataSources.find(ds => ds.id === endpoint.dataSourceId)}` }, `[ERRO] Base Url ou Path não encontrados!`);
             continue;
         }
         // - - -
@@ -36,71 +37,101 @@ export async function EndpointFetcherOrchestrator(DataSources: IDataSource[], en
             const fullUrl: string = new URL(path, baseUrl).toString();
 
             // - LOG -
-            logger.debug({module: module, context: context, data: `[FULL URL] ${fullUrl} | [BASE URL] ${baseUrl} | [PATH] ${path}`}, `[URL] Url construída.`);
+            logger.debug({ module: module, context: context, data: `[FULL URL] ${fullUrl} | [BASE URL] ${baseUrl} | [PATH] ${path}` }, `[URL] Url construída.`);
             // - - -
 
-            const apiResponse = await EndpointFetcher(fullUrl);
+            const response: any | null = await EndpointFetcher(fullUrl);
 
             // - ERRO -
-            if (!apiResponse) {
-                // ERRO...
+            if (!response) {
+                logger.error({ module: module, context: context, data: fullUrl }, `[ERRO] O objeto de resposta da API não foi retornado corretamente.`)
+                continue;
+            }
+            // - - -
+
+            // - OPCIONAL -
+            // > Inserção do response dos endpoints sem tratamento dos itens retornados
+            try {
+                const apiResponse: IApiResponse = {
+                    items: response["items"] || response["registros"],
+                    limit: response["limit"],
+                    offset: response["offset"],
+                    count: response["count"],
+                    hasMore: response["hasMore"]
+                }
+
+                const [insertedRawEndpoint] = await db.insert(RawEndpointResponse).values({
+                    endpointPath: fullUrl,
+                    raw_items: JSON.stringify(apiResponse.items, null, 2),
+                    count: apiResponse.count,
+                    hasMore: apiResponse.hasMore ? 1 : 0,
+                    limit: apiResponse.limit,
+                    offset: apiResponse.offset,
+                    generatedAt: String(Date.now()),
+                }).returning({ id: RawEndpointResponse.id })
+
+                if (!insertedRawEndpoint) {
+                    logger.error({ module: module, context: context, data: JSON.stringify(apiResponse, null, 2) }, `[ERRO] Não foi possível extrair o id do endpoint inserido.`);
+                    continue;
+                }
+
+                if (!response["links"]) {
+                    logger.warn({module: module, context: context, data: `Endpoint Id: ${endpoint.id}`}, `[WARN] Response não retornou objetos de links da api para o endpoint processado`);
+                    continue;
+                }
+
+                const newApiLinks: NewApiLink[] = [];
+                for (const link of response["links"]) {
+                    if (link) {
+                        const newApiLink: NewApiLink = {
+                            endpointId: insertedRawEndpoint.id,
+                            href: link["href"],
+                            rel: link["rel"],
+                            generatedAt: String(Date.now()),
+                        }
+    
+                        if (newApiLink) {
+                            newApiLinks.push(newApiLink);
+                        }
+                    }
+                }
+
+                if (newApiLinks)
+                    db.insert(ApiLinks).values(newApiLinks).run();
+            } catch (error) {
+                logger.error({ module: module, context: context, data: JSON.stringify(response, null, 2) }, `[ERRO] ${error}`);
                 continue;
             }
             // - - -
         } catch (error: any) {
-            logger.error({module: module, context: context, data: `${error}`}, `[ERRO] Falha ao construir a URL para consulta do endpoint.`);
+            logger.error({ module: module, context: context, data: `${error}` }, `[ERRO] Falha ao construir a URL para consulta do endpoint.`);
             continue;
         }
     }
 }
 
-async function EndpointFetcher(fullUrl: string): Promise<IApiResponse<String> | null> {
+async function EndpointFetcher(fullUrl: string): Promise<any | null> {
     const context = `EndpointFetcher`;
 
     try {
-        const response = await axios.get(fullUrl, { params: { limit: 1, offset: 0 }, timeout: 30000 });
+        const response = await axios.get(fullUrl, { params: { offset: 0 }, timeout: 60000 });
 
         // - ERRO -
         if (response.status != 200) {
-            logger.error({module: module, context: context, data: `FULL URL: ${fullUrl}`}, `[ERRO] Status da requisição ${response.status}`);
+            logger.error({ module: module, context: context, data: `FULL URL: ${fullUrl}` }, `[ERRO] Status da requisição ${response.status}`);
             return null;
         }
         // - - -
 
         // - LOG -
         if (response.data['items']?.length == 0) {
-            logger.warn({module: module, context: context, data: `${fullUrl}`}, `[WARN] Endpoint vazio/sem itens!`);
+            logger.warn({ module: module, context: context, data: `${fullUrl}` }, `[WARN] Endpoint vazio/sem itens!`);
         }
 
-        logger.debug({module: module, context: context, data: `${JSON.stringify(response.data, null, 2)}`}, `[DEBUG] Response gerada`);
+        logger.debug({ module: module, context: context, data: `${JSON.stringify(response.data, null, 2)}` }, `[DEBUG] Response gerada`);
         // - - -
 
-        const data = response.data;
-
-        const apiLinks: ApiLink[] = [];
-        for (const link of data["links"]) {
-            const apiLink: ApiLink = {
-                href: link.href || '',
-                rel: link.rel || ''
-            }
-
-            if (apiLink) {
-                apiLinks.push(apiLink);
-            } else {
-                logger.warn({module: module, context: context}, `[WARN] Api Link não foi montado corretamente.`);
-            }
-        }
-
-        const apiResponse: IApiResponse<string> = {
-            items: data["items"],
-            limit: data["limit"],
-            offset: data["offset"],
-            count: data["count"],
-            hasMore: data["hasMore"],
-            links: apiLinks
-        }
-
-        return apiResponse;
+        return response.data;
     } catch (error: any) {
         return null;
     }

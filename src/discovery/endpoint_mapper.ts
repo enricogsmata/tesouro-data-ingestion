@@ -1,14 +1,14 @@
-import type { IDataSource } from "../database/models/datasource/models.js";
-import type { IRawEndpoint, HttpMethod } from "../database/models/endpoint/models.js";
+import type { DataSource, HttpMethod, NewEndpoint } from "../database/types.js";
 
-export function MapDiscoveredEndpointsInMemory(IDataSources: IDataSource[]): IRawEndpoint[] {
-    const endpoints: IRawEndpoint[] = [];
+
+export function MapDiscoveredEndpointsInMemory(dataSources: DataSource[]): NewEndpoint[] {
+    const endpoints: NewEndpoint[] = [];
     const HTTP_METHODS = ["get", "post", "put", "delete", "patch"] as const;
 
-    for (const IDataSource of IDataSources) {
-        const metadataObj = typeof IDataSource.metadata === "string"
-            ? JSON.parse(IDataSource.metadata)
-            : IDataSource.metadata;
+    for (const dataSource of dataSources) {
+        const metadataObj = typeof dataSource.rawMetadata === "string"
+            ? JSON.parse(dataSource.rawMetadata)
+            : dataSource.rawMetadata;
 
         if (!metadataObj?.paths) continue;
 
@@ -25,9 +25,8 @@ export function MapDiscoveredEndpointsInMemory(IDataSources: IDataSource[]): IRa
                 // > Realizamos a sanitização do 'path' para torná-lo integrável à url base da api, evitando inconsistências
                 const sanitizedPath = path.startsWith('/') ? path.slice(1) : path;
 
-                const newEndpoint: IRawEndpoint = {
-                    tempId: crypto.randomUUID ? crypto.randomUUID() : `${Math.random()-Date.now()}`,
-                    IDataSourceTempId: IDataSource.tempId,
+                const newEndpoint: NewEndpoint = {
+                    dataSourceId: dataSource.id,
                     method: method,
                     path: sanitizedPath,
                     description: methodObj?.description || "",
