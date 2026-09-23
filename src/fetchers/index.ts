@@ -139,7 +139,7 @@ async function PersistRawEndpointResponse(response: any, endpointId: number) {
 
     const responseData = response.data || {};
     if (responseData['items']?.length === 0) {
-        logger.warn({ module: module, context: context, data: `Endpoint ID: ${endpointId}'` }, `[WARN] Endpoint vazio/sem itens!`);
+        logger.info({ module: module, context: context, data: `Endpoint ID: ${endpointId}'` }, `[INFO] Endpoint vazio/sem itens!`);
     }
 
     try {

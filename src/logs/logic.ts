@@ -1,9 +1,10 @@
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { type Log, type LOG_LEVELS } from "../database/types.js";
-import * as fs from 'fs';
-import { logs } from "../database/schema.js";
+import { Logs } from "../database/schema.js";
 import { Writable } from "stream";
 import pino from "pino";
+import { db } from "../database/dbConnection.js";
+import { gte } from "drizzle-orm";
 
 export function createAppLogger(db: BetterSQLite3Database<Record<string, never>>): pino.Logger {
     const dbStream = new Writable({
@@ -13,13 +14,13 @@ export function createAppLogger(db: BetterSQLite3Database<Record<string, never>>
                 const logLevel = logObject.level ? parseLogLevel(logObject.level) : 'UNDEFINED';
 
                 if (logObject.level && logObject.level >= 40) {
-                    db.insert(logs).values({
+                    db.insert(Logs).values({
                         message: logObject.msg || 'EMPTY',
                         data: logObject.data || null,
                         sourceModule: logObject.module || null,
                         sourceContext: logObject.context || null,
                         type: logLevel,
-                        generatedAt: String(logObject.time ?? Date.now()),
+                        generatedAt: Number(logObject.time) ?? Date.now(),
                     }).run();
                 }
             } catch (error) {
@@ -41,6 +42,13 @@ export function createAppLogger(db: BetterSQLite3Database<Record<string, never>>
             { stream: dbStream }
         ])
     );
+}
+
+export async function sanitizeLogsTable() {
+    const CACHE = 30 * 24 * 60 * 60 * 1000; // 30 dias
+    await db
+        .delete(Logs)
+        .where(gte(Logs.generatedAt, CACHE)); // deletamos todos os registros de logs com mais de 30 dias
 }
 
 function parseLogLevel(level: number): LOG_LEVELS {

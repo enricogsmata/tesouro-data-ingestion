@@ -3,7 +3,7 @@ import { BuildDataSources } from "./discovery/discovery.js";
 import { MapDiscoveredEndpointsInMemory } from "./discovery/endpoint_mapper.js";
 import { db } from './database/dbConnection.js';
 import { EndpointFetcherOrchestrator } from './fetchers/index.js';
-import { createAppLogger } from "./logs/logic.js";
+import { createAppLogger, sanitizeLogsTable } from "./logs/logic.js";
 import { fileURLToPath } from 'url';
 import { DataSources, EndpointParameters, Endpoints } from './database/schema.js';
 import type { DataSource, Endpoint, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from './database/types.js';
@@ -21,6 +21,11 @@ const logger = createAppLogger(db);
 async function run() {
     const context = 'run';
     logger.info({ module: module, context: context }, "[STATUS] Iniciando script...");
+
+    // ========================================
+    // 0. SANITIZAÇÃO DE LOGS NO BANCO DE DADOS
+    // ========================================
+    await sanitizeLogsTable();
 
     // ===================================
     // 1. DESCOBERTA DE CONJUNTOS DE DADOS
