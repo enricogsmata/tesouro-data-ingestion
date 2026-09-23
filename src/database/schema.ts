@@ -41,11 +41,20 @@ export const DataSources = sqliteTable('data_sources', {
 export const Endpoints = sqliteTable('endpoint', {
     id: integer('id').primaryKey({ autoIncrement: true }).notNull().unique(),
     dataSourceId: integer('data_source_id').notNull(),
-    path: text('path'),
+    path: text('path').notNull(),
     method: text('method'),
     summary: text('summary'),
     description: text('description'),
     tags: text('tags'),
+})
+
+export const EndpointParameters = sqliteTable('endpoint_parameters', {
+    endpointId: integer('endpoint_id').notNull(),
+    name: text('name'),
+    in: text('in'),
+    description: text('description'),
+    is_required: integer('is_required').notNull(),
+    type: text('type'),
 })
 
 // - - - - - - - - - - - -
@@ -53,7 +62,7 @@ export const Endpoints = sqliteTable('endpoint', {
 // - - - - - - - - - - - -
 export const RawEndpointResponse = sqliteTable('raw_endpoint_response', {
     id: integer('id').primaryKey({ autoIncrement: true }).notNull().unique(),
-    endpointPath: text('endpoint_path').notNull(),
+    endpointId: integer('endpoint_id').notNull(),
     raw_items: text('raw_items'),
     hasMore: integer('hasMore'),
     limit: integer('limit'),
@@ -77,10 +86,13 @@ export const ApiLinks = sqliteTable('api_links', {
 // * RELATIONS
 // - - - - - - -
 
-// = RAW_ENDPOINT_RESPONSE + API_LINKS =
 export const rawEndpointRelations = relations(
     RawEndpointResponse,
-    ({ many }) => ({
+    ({ one, many }) => ({
+        endpointId: one(Endpoints, {
+            fields: [RawEndpointResponse.endpointId],
+            references: [Endpoints.id]
+        }),
         links: many(ApiLinks),
     })
 );
@@ -95,7 +107,6 @@ export const apiLinksRelations = relations(
     })
 );
 
-// = DATA_SOURCES + ENDPOINTS
 export const dataSourcesRelations = relations(
     DataSources,
     ({ many }) => ({
@@ -103,12 +114,23 @@ export const dataSourcesRelations = relations(
     })
 );
 
+export const endpointParameterRelations = relations(
+    EndpointParameters,
+    ({ one }) => ({
+        endpoint: (one(Endpoints, {
+            fields: [EndpointParameters.endpointId],
+            references: [Endpoints.id],
+        }))
+    })
+);
+
 export const endpointsRelations = relations(
     Endpoints,
-    ({ one }) => ({
+    ({ one, many }) => ({
         dataSource: one(DataSources, {
             fields: [Endpoints.dataSourceId],
             references: [DataSources.id],
-        })
+        }),
+        parameters: many(EndpointParameters),
     })
 );

@@ -1,8 +1,8 @@
-import type { DataSource, HttpMethod, NewEndpoint } from "../database/types.js";
+import type { DataSource, HttpMethod, MappedEndpointWithParams, NewEndpoint, NewEndpointParameter } from "../database/types.js";
 
 
-export function MapDiscoveredEndpointsInMemory(dataSources: DataSource[]): NewEndpoint[] {
-    const endpoints: NewEndpoint[] = [];
+export function MapDiscoveredEndpointsInMemory(dataSources: DataSource[]): MappedEndpointWithParams[] {
+    const mappedEndpoints: MappedEndpointWithParams[] = [];
     const HTTP_METHODS = ["get", "post", "put", "delete", "patch"] as const;
 
     for (const dataSource of dataSources) {
@@ -34,10 +34,32 @@ export function MapDiscoveredEndpointsInMemory(dataSources: DataSource[]): NewEn
                     tags: methodObj?.tags || []
                 };
 
-                endpoints.push(newEndpoint);
+                const mappedEndpointParams: Omit<NewEndpointParameter, 'endpointId'>[] = [];
+
+                if (methodObj.parameters) {
+                    for (const param of methodObj.parameters) {
+
+                        const newEndpointParams: Omit<NewEndpointParameter, 'endpointId'> = {
+                            name: param.name || '',
+                            is_required: String(param.required).toLowerCase() === "true" ? 1 : 0,
+                            in: param.in || '',
+                            description: param.description || '',
+                            type: param.type || '',
+                        }
+
+                        mappedEndpointParams.push(newEndpointParams);
+                    }
+                }
+
+                const mappedEndpoint: MappedEndpointWithParams = {
+                    mappedEndpoint: newEndpoint,
+                    mappedEndpointParams: mappedEndpointParams
+                }
+
+                mappedEndpoints.push(mappedEndpoint);
             }
         }
     }
 
-    return endpoints;
+    return mappedEndpoints;
 }

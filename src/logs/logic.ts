@@ -1,5 +1,5 @@
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import { type Log, type LOG_LEVELS } from "./types.js";
+import { type Log, type LOG_LEVELS } from "../database/types.js";
 import * as fs from 'fs';
 import { logs } from "../database/schema.js";
 import { Writable } from "stream";
