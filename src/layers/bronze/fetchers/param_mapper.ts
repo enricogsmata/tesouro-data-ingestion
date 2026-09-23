@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../database/dbConnection.js";
-import { Endpoints, RawEndpointResponse } from "../database/schema.js";
+import { Endpoints, RawEndpointResponse } from "../database/schemas/bronze-schema.js";
 import type { Endpoint } from "../database/types.js";
 
 const INITIAL_YEAR = 2015;

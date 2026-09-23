@@ -1,6 +1,6 @@
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { type Log, type LOG_LEVELS } from "../database/types.js";
-import { Logs } from "../database/schema.js";
+import { Logs } from "../database/schemas/bronze-schema.js";
 import { Writable } from "stream";
 import pino from "pino";
 import { db } from "../database/dbConnection.js";

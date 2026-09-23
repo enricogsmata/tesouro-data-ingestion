@@ -1,12 +1,12 @@
 import path from 'path';
-import { BuildDataSources } from "./discovery/discovery.js";
-import { MapDiscoveredEndpointsInMemory } from "./discovery/endpoint_mapper.js";
+import { BuildDataSources } from "./layers/bronze/discovery/discovery.js";
+import { MapDiscoveredEndpointsInMemory } from "./layers/bronze/discovery/endpoint_mapper.js";
 import { db } from './database/dbConnection.js';
-import { EndpointFetcherOrchestrator } from './fetchers/index.js';
-import { createAppLogger, sanitizeLogsTable } from "./logs/logic.js";
+import { EndpointFetcherOrchestrator } from './layers/bronze/fetchers/index.js';
+import { createAppLogger, sanitizeLogsTable } from "./services/logs.js";
 import { fileURLToPath } from 'url';
-import { DataSources, EndpointParameters, Endpoints } from './database/schema.js';
-import type { DataSource, Endpoint, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from './database/types.js';
+import { DataSources, EndpointParameters, Endpoints } from './database/schemas/bronze-schema.js';
+import type { DataSource, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from './database/types.js';
 import { eq } from 'drizzle-orm';
 
 type PersistEndpointResponse = {

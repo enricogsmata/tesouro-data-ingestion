@@ -3,7 +3,7 @@ import axios from "axios";
 import { createAppLogger } from "../logs/logic.js";
 import { db } from "../database/dbConnection.js";
 import { fileURLToPath } from "url";
-import { ApiLinks, EndpointParameters, RawEndpointResponse } from "../database/schema.js";
+import { ApiLinks, EndpointParameters, RawEndpointResponse } from "../database/schemas/bronze-schema.js";
 import type { DataSource, Endpoint, EndpointParameter, IApiResponse, NewApiLink } from "../database/types.js";
 import { eq } from "drizzle-orm";
 import { parameterResolver } from "./param_mapper.js";

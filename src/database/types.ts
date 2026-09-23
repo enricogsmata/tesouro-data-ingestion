@@ -1,4 +1,4 @@
-import type { ApiLinks, DataSources, EndpointParameters, Endpoints } from "./schema.js";
+import type { ApiLinks, DataSources, EndpointParameters, Endpoints } from "./schemas/bronze-schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
