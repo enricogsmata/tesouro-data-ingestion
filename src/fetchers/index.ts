@@ -8,12 +8,10 @@ import type { DataSource, Endpoint, EndpointParameter, IApiResponse, NewApiLink 
 import { eq } from "drizzle-orm";
 import { parameterResolver } from "./param_mapper.js";
 
-// - LOGGER -
 console.clear();
 const module = path.basename(fileURLToPath(import.meta.url));
 const logger = createAppLogger(db);
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Horas
-// - - -
 
 export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[]) {
     const context = `EndpointFetcherOrchestrator`;
@@ -48,7 +46,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
 
     const isCached = await isEndpointCached(endpoint.id);
     if (isCached) {
-        logger.warn({ module: module, context: context, data: `Endpoint ID: ${endpoint.id}` }, `[CACHE] Registro dentro do prazo de 24h. Requisição HTTP ignorada.`);
+        logger.info({ module: module, context: context, data: `Endpoint ID: ${endpoint.id}` }, `[CACHE] Registro dentro do prazo de 24h. Requisição HTTP ignorada.`);
         return;
     }
 

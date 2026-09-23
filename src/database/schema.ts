@@ -50,7 +50,7 @@ export const Endpoints = sqliteTable('endpoint', {
 
 export const EndpointParameters = sqliteTable('endpoint_parameters', {
     endpointId: integer('endpoint_id').notNull(),
-    name: text('name'),
+    name: text('name').notNull(),
     in: text('in'),
     description: text('description'),
     is_required: integer('is_required').notNull(),
