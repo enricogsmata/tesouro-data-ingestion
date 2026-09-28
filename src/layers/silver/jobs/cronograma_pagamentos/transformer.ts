@@ -20,9 +20,8 @@ type RawCronogramaPagamentos = {
     indicador_div_moeda_estrang: string;
 };
 
-export async function buildCronogramaPagamentosEntities(): Promise<NewCronogramaPagamentos[] | null> {
+export async function buildCronogramaPagamentosEntities(rawData: any[] | null): Promise<NewCronogramaPagamentos[] | null> {
     context = 'buildCronogramaPagamentosEntities';
-    const rawData = await getCronogramaPagamentosRawResponse();
 
     if (!rawData) {
         logger.error({ module: module, context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);

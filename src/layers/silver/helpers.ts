@@ -13,6 +13,10 @@ export async function getEndpointIdByPath(path: string): Promise<number | null> 
         .from(endpoints)
         .where(like(endpoints.path, `%${path}%`));
 
+    if (!endpoint) {
+        logger.error({ context: context, data: `SELECT * FROM Endpoints WHERE LIKE %${path}%;` }, `[ERRO] Não foi possível encontrar um endpoint com o path especificado.`);
+    }
+
     return endpoint ? endpoint.endpointId : null;
 }
 
