@@ -3,9 +3,9 @@ import { BuildDataSources } from "./layers/bronze/discovery/discovery.js";
 import { MapDiscoveredEndpointsInMemory } from "./layers/bronze/discovery/endpoint_mapper.js";
 import { db } from './database/dbConnection.js';
 import { EndpointFetcherOrchestrator } from './layers/bronze/fetchers/index.js';
-import { createAppLogger, sanitizeLogsTable } from "./services/logs.js";
+import { createAppLogger, sanitizelogsTable } from "./services/logs.js";
 import { fileURLToPath } from 'url';
-import { DataSources, EndpointParameters, Endpoints } from './database/schemas/bronze-schema.js';
+import { dataSources, endpointParameters, endpoints } from './database/schema.js';
 import type { DataSource, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from './database/types.js';
 import { eq } from 'drizzle-orm';
 
@@ -15,9 +15,11 @@ type PersistEndpointResponse = {
 }
 
 const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createAppLogger();
 
-const logger = createAppLogger(db);
-
+/**
+ * Entry point do algoritmo do scrapper
+ */
 async function run() {
     const context = 'run';
     logger.info({ module: module, context: context }, "[STATUS] Iniciando script...");
@@ -25,7 +27,7 @@ async function run() {
     // ========================================
     // 0. SANITIZAÇÃO DE LOGS NO BANCO DE DADOS
     // ========================================
-    await sanitizeLogsTable();
+    await sanitizelogsTable();
 
     // ===================================
     // 1. DESCOBERTA DE CONJUNTOS DE DADOS
@@ -36,77 +38,79 @@ async function run() {
     // -------------------------------------------------------------
     // Fluxo de scraping do CKAN e descoberta dos conjuntos de dados
     // -------------------------------------------------------------
-    const DataSourcesList: NewDataSource[] | null = await BuildDataSources();
+    const dataSourcesList: NewDataSource[] | null = await BuildDataSources();
 
-    if (!DataSourcesList) {
+    if (!dataSourcesList) {
         logger.fatal({ module: module, context: context }, "[ERRO] Falha no seed dos data sources!");
         throw new Error("[ERRO | RUN] Falha no seed dos data sources!");
     }
 
     // Persistência dos conjuntos de dados extraídos do CKAN 
-    await persistDiscoveredDatasources(DataSourcesList);
+    await persistDiscoveredDatasources(dataSourcesList);
 
     // ==========================
     // 2. MAPEAMENTO DE ENDPOINTS
     // ==========================
 
-    logger.info({ module: module, context: context, msg: `> Descobrindo EndpointsList...` });
+    logger.info({ module: module, context: context, msg: `> Descobrindo endpointsList...` });
 
     // ---------------------------------
     // Fluxo de mapeamento dos endpoints
     // ---------------------------------
-    const dataSources = await db.select().from(DataSources) as DataSource[];
-    const MappedEndpointsWithParamsList: MappedEndpointWithParams[] = MapDiscoveredEndpointsInMemory(dataSources);
+    const DataSources = await db.select().from(dataSources) as DataSource[];
+    const MappedendpointsWithParamsList: MappedEndpointWithParams[] = MapDiscoveredEndpointsInMemory(DataSources);
 
-    if (!MappedEndpointsWithParamsList) {
-        logger.error({ module: module, context: context }, "[ERRO] Falha no mapeamento dos EndpointsList!");
+    if (!MappedendpointsWithParamsList) {
+        logger.error({ module: module, context: context }, "[ERRO] Falha no mapeamento dos endpointsList!");
     }
 
     // Persistência dos endpoints e seus parâmetros mapeados
-    await persistMappedEndpoints(MappedEndpointsWithParamsList);
+    await persistMappedendpoints(MappedendpointsWithParamsList);
 
     // ==================================================
     // 3. EXTRAÇÃO DOS DADOS "RAW" DOS ENDPOINTS MAPEADOS
     // ==================================================
 
-    const endpoints = await db.select().from(Endpoints);
+    logger.info({module: module, context: context}, `> Extraindo dados brutos...`);
 
-    await EndpointFetcherOrchestrator(dataSources, endpoints);
+    const Endpoints = await db.select().from(endpoints);
+
+    await EndpointFetcherOrchestrator(DataSources, Endpoints);
 
     logger.info({ module: module, context: context }, "[STATUS] Script concluído!");
     logger.flush();
 }
 
 /**
- * 
- * @param Datasources - Os conjuntos de dados extraídos do CKAN
+ * Persistência das fontes de dados extraídos do CKAN
+ * @param Datasources - Conjunto de fontes de dados extraídos do CKAN
  */
 async function persistDiscoveredDatasources(Datasources: NewDataSource[]) {
     const context = 'persistDiscoveredDatasources';
 
     try {
         for (const dataSource of Datasources) {
-            const [existingDatasource] = await db.select().from(DataSources).where(eq(DataSources.baseUrl, dataSource.baseUrl));
+            const [existingDatasource] = await db.select().from(dataSources).where(eq(dataSources.baseUrl, dataSource.baseUrl));
 
             // Conjuntos de dados já persistidos são ignorados para evitar dados duplicados no banco
             if (existingDatasource) continue;
 
-            await db.insert(DataSources).values(dataSource);
+            await db.insert(dataSources).values(dataSource);
         }
     } catch (error) {
-        logger.fatal({ module: module, context: context, data: `[INSERT INTO DataSources] | DataSources Count: ${Datasources.length}` }, `[FATAL] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
+        logger.fatal({ module: module, context: context, data: `[INSERT INTO dataSources] | dataSources Count: ${Datasources.length}` }, `[FATAL] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
     }
 }
 
 /**
- * 
- * @param MappedEndpointsWithParams - Os endpoints + parâmetros mapeados
+ * Orquestrador da persistência dos endpoints e parâmetros extraídos do CKAN
+ * @param MappedendpointsWithParams - Os endpoints + parâmetros mapeados
  */
-async function persistMappedEndpoints(MappedEndpointsWithParams: MappedEndpointWithParams[]) {
-    const context = 'persistMappedEndpoints';
+async function persistMappedendpoints(MappedendpointsWithParams: MappedEndpointWithParams[]) {
+    const context = 'persistMappedendpoints';
 
     try {
-        for (const MappedEndpointWithParam of MappedEndpointsWithParams) {
+        for (const MappedEndpointWithParam of MappedendpointsWithParams) {
             const mappedEndpoint = MappedEndpointWithParam.mappedEndpoint;
             const mappedEndpointParams = MappedEndpointWithParam.mappedEndpointParams;
 
@@ -120,20 +124,20 @@ async function persistMappedEndpoints(MappedEndpointsWithParams: MappedEndpointW
             await persistEndpointParams(mappedEndpointParams, mappedEndpoint, persistedEndpoint);
         }
     } catch (error) {
-        logger.error({ module: module, context: context, data: `[INSERT INTO Endpoints]` }, `[ERRO] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
+        logger.error({ module: module, context: context, data: `[INSERT INTO endpoints]` }, `[ERRO] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
     }
 }
 
 /**
- * 
+ * Persistência de um objeto de endpoint mapeado
  * @param mappedEndpoint - Endpoint mapeado
  * @returns O id do endpoint recém inserido OU o id do endpoint já inserido no banco de dados
  */
 async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistEndpointResponse | null> {
     const context = 'persistNewEndpoint';
-    const [existingEndpoint] = await db.select().from(Endpoints).where(eq(Endpoints.path, mappedEndpoint.path));
+    const [existingEndpoint] = await db.select().from(endpoints).where(eq(endpoints.path, mappedEndpoint.path));
 
-    // Endpoints já existentes no banco de dados não são inseridos para evitar dados duplicados
+    // endpoints já existentes no banco de dados não são inseridos para evitar dados duplicados
     if (existingEndpoint) {
         return {
             endpointId: existingEndpoint.id,
@@ -141,10 +145,10 @@ async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistE
         }
     }
 
-    const [persistedEndpointId] = await db.insert(Endpoints).values(mappedEndpoint).returning({ id: Endpoints.id });
+    const [persistedEndpointId] = await db.insert(endpoints).values(mappedEndpoint).$returningId();
 
     if (!persistedEndpointId) {
-        logger.error({ module: module, context: context, data: `${JSON.stringify(mappedEndpoint, null, 2)}` }, `[ERRO] Falha ao inserir os parâmetros do endpoint mapeado.`);
+        logger.error({ module: module, context: context}, `[ERRO] Falha ao inserir os parâmetros do endpoint mapeado.`);
         return null;
     }
 
@@ -155,7 +159,7 @@ async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistE
 }
 
 /**
- * 
+ * Persistência dos parâmetros do endpoint mapeado
  * @param mappedEndpointParams - Lista de parâmetros do endpoint mapeado
  * @param endpoint - Endpoint mapeado
  * @param persistedEndpointId - Id do endpoint já existente ou do inserido no banco de dados
@@ -179,7 +183,7 @@ async function persistEndpointParams(mappedEndpointParams: any[], endpoint: NewE
     if (newEndpointParams.length > 0) {
         if (persistedEndpoint.alreadyExists) {
             for (const endpointParam of newEndpointParams) {
-                const existingEndpointParams = await db.select().from(EndpointParameters).where(eq(EndpointParameters.name, endpointParam.name));
+                const existingEndpointParams = await db.select().from(endpointParameters).where(eq(endpointParameters.name, endpointParam.name));
 
                 // Somente inserimos parâmetros não persistidos
                 if (existingEndpointParams.length > 0)
@@ -187,7 +191,13 @@ async function persistEndpointParams(mappedEndpointParams: any[], endpoint: NewE
             }
         }
 
-        await db.insert(EndpointParameters).values(newEndpointParams);
+        for (const newEndpointParam of newEndpointParams) {
+            const [alreadyExists] = await db.select().from(endpointParameters).where(eq(endpointParameters.name, newEndpointParam.name));
+
+            if (!alreadyExists) {
+                await db.insert(endpointParameters).values(newEndpointParam);
+            }
+        }
     }
 }
 

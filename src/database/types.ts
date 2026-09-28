@@ -1,18 +1,30 @@
-import type { ApiLinks, DataSources, EndpointParameters, Endpoints } from "./schemas/bronze-schema.js";
+import type { apiLinks, credor, dataSources, endpointParameters, endpoints, entes, pvl, rawEndpointResponse } from "./schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
-export type DataSource = typeof DataSources.$inferSelect;
-export type NewDataSource = typeof DataSources.$inferInsert;
+export type DataSource = typeof dataSources.$inferSelect;
+export type NewDataSource = typeof dataSources.$inferInsert;
 
-export type Endpoint = typeof Endpoints.$inferSelect;
-export type NewEndpoint = typeof Endpoints.$inferInsert;
+export type Endpoint = typeof endpoints.$inferSelect;
+export type NewEndpoint = typeof endpoints.$inferInsert;
 
-export type EndpointParameter = typeof EndpointParameters.$inferSelect;
-export type NewEndpointParameter = typeof EndpointParameters.$inferInsert;
+export type EndpointParameter = typeof endpointParameters.$inferSelect;
+export type NewEndpointParameter = typeof endpointParameters.$inferInsert;
 
-export type ApiLink = typeof ApiLinks.$inferSelect;
-export type NewApiLink = typeof ApiLinks.$inferInsert;
+export type RawEndpointResponse = typeof rawEndpointResponse.$inferSelect;
+export type NewrawEndpointResponse = typeof rawEndpointResponse.$inferInsert;
+
+export type ApiLink = typeof apiLinks.$inferSelect;
+export type NewApiLink = typeof apiLinks.$inferInsert;
+
+export type Ente = typeof entes.$inferSelect;
+export type NewEnte = typeof entes.$inferInsert;
+
+export type Pvl = typeof pvl.$inferSelect;
+export type NewPvl = typeof pvl.$inferInsert;
+
+export type Credor = typeof credor.$inferSelect;
+export type NewCredor = typeof credor.$inferInsert;
 
 export type MappedEndpointWithParams = {
     mappedEndpoint: NewEndpoint,

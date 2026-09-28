@@ -6,11 +6,10 @@ import * as cheerio from 'cheerio';
 import puppeteer, { Browser } from "puppeteer";
 import YAML from 'yaml';
 import path from "path";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { fileURLToPath } from "url";
-import { db } from "../database/dbConnection.js";
-import { createAppLogger } from "../logs/logic.js";
-import type { NewDataSource } from "../database/types.js";
+import { db } from "../../../database/dbConnection.js";
+import type { NewDataSource } from "../../../database/types.js";
+import { logger } from "../../../services/logs.js";
 
 // - URL/PATH base utilizados na descoberta dos conjuntos de dados -
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
@@ -19,8 +18,6 @@ const BASE_CKAN_PATH: string = '/ckan/dataset'
 
 // - LOGGER -
 const module = path.basename(fileURLToPath(import.meta.url));
-
-const logger = createAppLogger(db);
 // - - -
 
 /*
@@ -583,7 +580,7 @@ async function LoadAxios(pageUrl: string): Promise<AxiosResponse | null> {
     - AUXILIAR -
     > Construção da url da página do conjunto de dados obtido
 */
-async function BuildDatasetPageUrl(discoveredDatasetHref: string, ckanMainPageBaseUrl: URL, db: BetterSQLite3Database<Record<string, never>>): Promise<string | null> {
+async function BuildDatasetPageUrl(discoveredDatasetHref: string, ckanMainPageBaseUrl: URL, db: any): Promise<string | null> {
     const context = `BuildDatasetPageUrl`;
     const datasetPageUrl = new URL(discoveredDatasetHref, ckanMainPageBaseUrl);
 

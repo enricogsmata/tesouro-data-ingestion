@@ -3,3 +3,5 @@ package-lock.json
 src/logs/*
 !src/logs/types.ts
 !src/logs/logic.ts
+.env
+tmp.ts

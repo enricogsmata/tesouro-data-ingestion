@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import { db } from "../database/dbConnection.js";
-import { Endpoints, RawEndpointResponse } from "../database/schemas/bronze-schema.js";
-import type { Endpoint } from "../database/types.js";
+import { db } from "../../../database/dbConnection.js";
+import { endpoints, rawEndpointResponse } from "../../../database/schema.js"
+import type { Endpoint } from "../../../database/types.js";
 
 const INITIAL_YEAR = 2015;
 
@@ -10,6 +10,9 @@ type ParameterResolverMap = {
     [key: string]: ResolverFunction | undefined;
 };
 
+/**
+ * Dicionário de parâmetros obrigatórios / funções de busca e retorno dos itens exigidos no parâmetro
+ */
 export const parameterResolver: ParameterResolverMap = {
     "an_exercicio": async () => {
         return generateYearsInterval(INITIAL_YEAR);
@@ -43,16 +46,16 @@ export const parameterResolver: ParameterResolverMap = {
 
     "id_ente": async () => {
         const [entesEndpoint] = await db
-            .select({ id: Endpoints.id })
-            .from(Endpoints)
-            .where(eq(Endpoints.path, "entes"));
+            .select({ id: endpoints.id })
+            .from(endpoints)
+            .where(eq(endpoints.path, "entes"));
 
         if (!entesEndpoint) return [];
 
         const rawResponses = await db
-            .select({ rawItems: RawEndpointResponse.raw_items })
-            .from(RawEndpointResponse)
-            .where(eq(RawEndpointResponse.endpointId, entesEndpoint.id));
+            .select({ rawItems: rawEndpointResponse.raw_items })
+            .from(rawEndpointResponse)
+            .where(eq(rawEndpointResponse.endpointId, entesEndpoint.id));
 
         if (!rawResponses || rawResponses.length === 0) return [];
 
@@ -102,9 +105,18 @@ export const parameterResolver: ParameterResolverMap = {
         if (endpointPath.includes('rgf')) return [1, 2, 3];
 
         return [];
+    },
+
+    "tema": async () => {
+        return ["10", "13", "20"];
     }
 }
 
+/**
+ * Auxiliar construtor de listas numéricas
+ * @param initialYear - Ano inicial de consulta no parâmetro
+ * @returns - Conjunto sequencial numérico de anos desde o ano inicial até o ano atual
+ */
 function generateYearsInterval(initialYear: number): number[] {
     const CURRENT_YEAR = new Date().getFullYear();
 

@@ -1,8 +1,7 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
+import 'dotenv/config';
 
-// > Inicializa o database SQLite
-const sqlite = new Database('tt_database.db', { timeout: 5000 });
+const poolConnection = mysql.createPool(process.env.DATABASE_URL!);
 
-// > Exporta a conexão do database para manipulação (INSERT | SELECT ...)
-export const db = drizzle(sqlite);
+export const db = drizzle(poolConnection);
