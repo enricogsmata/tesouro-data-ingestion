@@ -7,6 +7,10 @@ import { buildPvlEntities, type RawPvl } from "./transformer.js";
 const logger = createLogger(import.meta.url);
 var context: string;
 
+/**
+ * Orquestra o ETL do Endpoint PVL
+ * @returns 
+ */
 export async function pvlOrchestrator() {
     context = 'pvlOrchestrator';
 
