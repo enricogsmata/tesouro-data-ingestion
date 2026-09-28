@@ -24,6 +24,11 @@ export async function persistNewCredor(newCredor:NewCredor): Promise<number | nu
     return insertedCredor?.idCredor ?? null;
 }
 
+/**
+ * Retorna um credor existente ou indefinido com base na consulta no banco de dados
+ * @param name - Nome do credor
+ * @returns - Credor encontrado ou indefinido caso não exista
+ */
 export async function getExistingCredor(name:string): Promise<Credor | undefined> {
     const [existingCredor] = await db.select().from(credor).where(eq(credor.credor, name)) ?? null;
     return existingCredor;

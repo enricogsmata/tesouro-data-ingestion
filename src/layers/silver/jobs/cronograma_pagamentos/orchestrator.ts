@@ -7,6 +7,10 @@ import { buildCronogramaPagamentosEntities } from "./transformer.js";
 const logger = createLogger(import.meta.url);
 var context: string;
 
+/**
+ * Orquestrador da lógica de ETL do Cronograma de Pagamentos
+ * @returns 
+ */
 export async function cronogramaPagamentosOrchestrator() {
     context = 'cronogramaPagamentosOrchestrator';
 
