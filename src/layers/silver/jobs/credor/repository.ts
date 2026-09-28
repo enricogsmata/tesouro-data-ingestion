@@ -1,12 +1,12 @@
 import path from "path";
 import type { Credor, NewCredor } from "../../../../database/types.js";
-import { logger } from "../../../../services/logs.js";
 import { fileURLToPath } from "url";
 import { db } from "../../../../database/dbConnection.js";
 import { credor } from "../../../../database/schema.js";
 import { eq } from "drizzle-orm";
+import { createLogger } from "../../../../services/logs.js";
 
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 var context: string;
 
 /**

@@ -6,9 +6,9 @@ import { apiLinks, endpointParameters, rawEndpointResponse } from "../../../data
 import type { DataSource, Endpoint, EndpointParameter, IApiResponse, NewApiLink } from "../../../database/types.js";
 import { eq } from "drizzle-orm";
 import { parameterResolver } from "./param_mapper.js";
-import { logger } from "../../../services/logs.js";
+import { createLogger } from "../../../services/logs.js";
 
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Horas
 
 /**

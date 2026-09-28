@@ -1,33 +1,10 @@
-import path from "path";
 import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
-import { fileURLToPath } from "url";
-import { logger } from "../../../../services/logs.js";
+import { createLogger } from "../../../../services/logs.js";
 
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 let context: string;
 
-export type RawPvl = {
-    idPleito: number,
-    tipoInteressado: string,
-    interessado: string,
-    codIbge: number,
-    uf: string,
-    numPvl: string,
-    status: string,
-    numProcesso?: string,
-    dataProtocolo?: string,
-    tipoOperacao: string,
-    finalidade: string,
-    tipoCredor: string,
-    credor: string,
-    moeda: string,
-    valor: number,
-    pvlAssocDivida: number,
-    pvlContratadoCredor: number,
-    dataStatus: string,
-}
-
-export async function getPvlRawResponse(): Promise<RawPvl[] | undefined> {
+export async function getPvlRawResponse(): Promise<any[] | undefined> {
     context = 'getPvlRawResponse';
 
     try {
@@ -45,7 +22,7 @@ export async function getPvlRawResponse(): Promise<RawPvl[] | undefined> {
             return undefined;
         }
 
-        return rawResponse as RawPvl[];
+        return rawResponse as any[];
     } catch (error) {
         logger.fatal({ module: module, context: context, data: error }, `[FATAL] Erro ao obter o conteúdo bruto do endpoint.`);
         return undefined;

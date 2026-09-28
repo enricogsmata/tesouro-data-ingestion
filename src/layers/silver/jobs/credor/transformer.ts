@@ -1,11 +1,9 @@
-import path from "path";
-import { fileURLToPath } from "url";
-import { type RawPvl } from "../pvl/loader.js";
-import type { Credor, NewCredor } from "../../../../database/types.js";
-import { logger } from "../../../../services/logs.js";
+import type { NewCredor } from "../../../../database/types.js";
+import { createLogger } from "../../../../services/logs.js";
 import { getExistingCredor, persistNewCredor } from "./repository.js";
+import type { RawPvl } from "../pvl/transformer.js";
 
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 var context: string;
 
 /**
@@ -26,7 +24,7 @@ export async function buildOrGetCredorEntity(rawPvl: RawPvl): Promise<number | n
 
     try {
         const newCredor: NewCredor = {
-            tipo: rawPvl.tipoCredor ?? '',
+            tipo: rawPvl.tipo_credor ?? '',
             credor: rawPvl.credor ?? '',
             createdAt: new Date(),
         }

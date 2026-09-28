@@ -1,21 +1,18 @@
-import path from 'path';
 import { BuildDataSources } from "./layers/bronze/discovery/discovery.js";
 import { MapDiscoveredEndpointsInMemory } from "./layers/bronze/discovery/endpoint_mapper.js";
 import { db } from './database/dbConnection.js';
 import { EndpointFetcherOrchestrator } from './layers/bronze/fetchers/index.js';
-import { createAppLogger, sanitizelogsTable } from "./services/logs.js";
-import { fileURLToPath } from 'url';
 import { dataSources, endpointParameters, endpoints } from './database/schema.js';
 import type { DataSource, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from './database/types.js';
 import { eq } from 'drizzle-orm';
+import { createLogger, sanitizelogsTable } from './services/logs.js';
 
 type PersistEndpointResponse = {
     endpointId: number,
     alreadyExists: boolean,
 }
 
-const module = path.basename(fileURLToPath(import.meta.url));
-const logger = createAppLogger();
+const logger = createLogger(import.meta.url);
 
 /**
  * Entry point do algoritmo do scrapper

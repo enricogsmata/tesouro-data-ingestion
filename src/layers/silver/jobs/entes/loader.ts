@@ -1,9 +1,7 @@
-import path from "path";
-import { fileURLToPath } from "url";
 import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
-import { logger } from "../../../../services/logs.js";
+import { createLogger } from "../../../../services/logs.js";
 
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 let context: string;
 
 export type RawEnte = {

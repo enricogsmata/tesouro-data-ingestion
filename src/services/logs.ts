@@ -1,19 +1,24 @@
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { type Log, type LOG_LEVELS } from "../database/types.js";
 import { logs } from "../database/schema.js";
 import { Writable } from "stream";
 import pino from "pino";
 import { db } from "../database/dbConnection.js";
 import { gte } from "drizzle-orm";
+import path from "path";
+import { fileURLToPath } from "url";
 
-export const logger = createAppLogger();
+export function createLogger(importMetaUrl: string): pino.Logger {
+    const baseLogger = createBaseLogger();
+    const module = path.basename(fileURLToPath(importMetaUrl));
+    return baseLogger.child({ module: module })
+}
 
 /**
  * Construtor de logger integrado com persistência no banco de dados
  * @param db - objeto do database
  * @returns - Retorna o logger construído com as instruções específicas.
  */
-function createAppLogger(): pino.Logger {
+function createBaseLogger(): pino.Logger {
     const dbStream = new Writable({
         write(chunk, encoding, callback) {
             try {

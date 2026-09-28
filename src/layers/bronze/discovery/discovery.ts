@@ -9,7 +9,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { db } from "../../../database/dbConnection.js";
 import type { NewDataSource } from "../../../database/types.js";
-import { logger } from "../../../services/logs.js";
+import { createLogger } from "../../../services/logs.js";
 
 // - URL/PATH base utilizados na descoberta dos conjuntos de dados -
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
@@ -17,7 +17,7 @@ const BASE_CKAN_PATH: string = '/ckan/dataset'
 // - - -
 
 // - LOGGER -
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 // - - -
 
 /*

@@ -1,19 +1,17 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { db } from "../../database/dbConnection.js";
 import { endpoints } from "../../database/schema.js";
-import path from "path";
-import { fileURLToPath } from "url";
 import { rawEndpointResponse } from "../../database/schema.js";
-import { logger } from "../../services/logs.js";
+import { createLogger } from "../../services/logs.js";
 
-const module = path.basename(fileURLToPath(import.meta.url));
+const logger = createLogger(import.meta.url);
 let context: string;
 
 export async function getEndpointIdByPath(path: string): Promise<number | null> {
     const [endpoint] = await db
         .select({ endpointId: endpoints.id })
         .from(endpoints)
-        .where(eq(endpoints.path, path));
+        .where(like(endpoints.path, `%${path}%`));
 
     return endpoint ? endpoint.endpointId : null;
 }
