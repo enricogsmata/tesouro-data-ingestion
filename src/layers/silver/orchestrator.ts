@@ -1,6 +1,6 @@
-import { buildPvlEntities } from "./jobs/pvl/transformer.js";
+import { pvlOrchestrator } from "./jobs/pvl/orchestrator.js";
+
 
 export async function transformEntitiesOrchestrator() {
-
-    
+    await pvlOrchestrator();
 }

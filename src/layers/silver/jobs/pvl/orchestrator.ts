@@ -11,21 +11,21 @@ export async function pvlOrchestrator() {
     context = 'pvlOrchestrator';
 
     const rawPvls: RawPvl[] | undefined = await getPvlRawResponse();
-    if (!rawPvls) {
-        logger.error({context: context}, `[ERRO] Dados brutos inválidos.`);
+    if (!rawPvls || rawPvls.length === 0) {
+        logger.error({context: context, data: JSON.stringify(rawPvls, null, 4) ?? rawPvls}, `[ERRO] Dados brutos inválidos.`);
         return;
     }
 
     const newPvls: NewPvl[] | null = await buildPvlEntities(rawPvls);
-    if (!newPvls) {
-        logger.error({context: context}, `[ERRO] Novos pvls não foram construídos corretamente.`);
+    if (!newPvls || newPvls.length === 0) {
+        logger.error({context: context, data: JSON.stringify(newPvls, null, 4) ?? rawPvls}, `[ERRO] Novos pvls não foram construídos corretamente.`);
         return;
     }
 
     if (newPvls && newPvls.length > 0)
         await persistNewPvls(newPvls);
     else {
-        logger.error({context: context}, `[ERRO] Não foi possível persistir os novos pvls gerados`);
+        logger.error({context: context, data: JSON.stringify(newPvls, null, 4) ?? rawPvls}, `[ERRO] Não foi possível persistir os novos pvls gerados`);
         return;
     }
 }
