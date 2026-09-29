@@ -8,7 +8,7 @@ import { cdpJobOrchestrator } from "./jobs/SADIPEM API/res-cdp/orchestrator.js";
 /**
  * Orquestrador dos jobs de transformação de cada endpoint bruto em dados tratados,
  */
-export async function transformEntitiesOrchestrator() {
+export async function jobsOrchestrator() {
     await pvlJobOrchestrator();
     // await cronogramaPagamentosJobOrchestrator();
     // await cronogramaLiberacoesJobOrchestrator();
@@ -16,3 +16,5 @@ export async function transformEntitiesOrchestrator() {
     // await rcpJobOrchestrator();
     // await cdpJobOrchestrator();
 }
+
+await jobsOrchestrator();

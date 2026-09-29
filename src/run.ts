@@ -13,6 +13,7 @@ type PersistEndpointResponse = {
 }
 
 const logger = createLogger(import.meta.url);
+logger.flush();
 
 /**
  * Entry point do algoritmo do scrapper
