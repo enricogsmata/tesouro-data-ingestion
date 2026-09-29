@@ -1,8 +1,8 @@
-import { pvlJobOrchestrator } from "./jobs/pvl/orchestrator.js";
-import { cronogramaLiberacoesJobOrchestrator } from "./jobs/cronograma-liberacoes/orchestrator.js";
-import { cronogramaPagamentosJobOrchestrator } from "./jobs/cronograma_pagamentos/orchestrator.js";
+import { pvlJobOrchestrator } from "./jobs/SADIPEM API/pvl/orchestrator.js";
+import { cronogramaLiberacoesJobOrchestrator } from "./jobs/SADIPEM API/cronograma-liberacoes/orchestrator.js";
+import { cronogramaPagamentosJobOrchestrator } from "./jobs/SADIPEM API/cronograma_pagamentos/orchestrator.js";
 import { cambioJobOrchestrator } from "./jobs/taxa-cambio/orchestrator.js";
-import { rcpJobOrchestrator } from "./jobs/res_cronograma_pagamentos/orchestrator.js";
+import { rcpJobOrchestrator } from "./jobs/SADIPEM API/res_cronograma_pagamentos/orchestrator.js";
 
 /**
  * Orquestrador dos jobs de transformação de cada endpoint bruto em dados tratados,

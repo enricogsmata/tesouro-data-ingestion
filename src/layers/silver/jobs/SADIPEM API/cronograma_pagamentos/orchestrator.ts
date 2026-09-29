@@ -1,5 +1,5 @@
-import type { NewCronogramaPagamentos } from "../../../../database/types.js";
-import { createLogger } from "../../../../services/logs.js";
+import type { NewCronogramaPagamentos } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js";
 import { loadRawCPs } from "./loader.js";
 import { persistNewCPs } from "./repository.js";
 import { transformRawCPs } from "./transformer.js";

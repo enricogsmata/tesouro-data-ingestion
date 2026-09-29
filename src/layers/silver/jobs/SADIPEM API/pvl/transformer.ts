@@ -1,7 +1,7 @@
-import type { NewPvl } from "../../../../database/types.js";
+import type { NewPvl } from "../../../../../database/types.js";
 import { buildOrGetCredorEntity } from "./credor/transformer.js";
-import { parseStringToData } from "../../helpers.js";
-import { createLogger } from "../../../../services/logs.js";
+import { parseStringToData } from "../../../helpers.js";
+import { createLogger } from "../../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
 var context: string;

@@ -1,4 +1,4 @@
-import { createLogger } from "../../../../services/logs.js";
+import { createLogger } from "../../../../../services/logs.js";
 import { loadRawCLs } from "./loader.js";
 import { persistNewCLs } from "./repository.js";
 import { buildCLEntities } from "./transformer.js";

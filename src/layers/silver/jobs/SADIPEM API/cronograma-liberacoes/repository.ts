@@ -1,7 +1,7 @@
-import { db } from "../../../../database/dbConnection.js";
-import { cronogramaLiberacoes } from "../../../../database/schema.js";
-import type { NewCronogramaLiberacoes } from "../../../../database/types.js";
-import { createLogger } from "../../../../services/logs.js";
+import { db } from "../../../../../database/dbConnection.js";
+import { cronogramaLiberacoes } from "../../../../../database/schema.js";
+import type { NewCronogramaLiberacoes } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
 var context: string;

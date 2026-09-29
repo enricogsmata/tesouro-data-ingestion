@@ -1,5 +1,5 @@
-import type { NewResumoCronogramaPagamentos } from "../../../../database/types.js";
-import { createLogger } from "../../../../services/logs.js"
+import type { NewResumoCronogramaPagamentos } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js"
 
 type RawRCP = {
     id_pleito: number,

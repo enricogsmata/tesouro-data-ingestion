@@ -1,5 +1,5 @@
-import { getEndpointIdByPath, getRawItems } from "../../helpers.js";
-import { createLogger } from "../../../../services/logs.js";
+import { getEndpointIdByPath, getRawItems } from "../../../helpers.js";
+import { createLogger } from "../../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
 var context: string;

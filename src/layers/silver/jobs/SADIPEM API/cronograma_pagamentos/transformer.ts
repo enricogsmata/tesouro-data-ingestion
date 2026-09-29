@@ -1,6 +1,6 @@
-import type { NewCronogramaPagamentos } from "../../../../database/types.js";
+import type { NewCronogramaPagamentos } from "../../../../../database/types.js";
 import { loadRawCPs } from "./loader.js";
-import { createLogger } from "../../../../services/logs.js";
+import { createLogger } from "../../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
 var context: string;
