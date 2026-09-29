@@ -1,4 +1,4 @@
-import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
+import { getEndpointIdByPath, getRawItems } from "../../helpers.js";
 import { createLogger } from "../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
@@ -14,9 +14,9 @@ export async function loadRawCPs(): Promise<any[] | null> {
         return null;
     }
 
-    const rawData = await getRawResponses(endpointId);
+    const rawData = await getRawItems(endpointId);
 
-    if (!rawData) {
+    if (rawData.length === 0) {
         logger.error({  context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);
         return null;
     }

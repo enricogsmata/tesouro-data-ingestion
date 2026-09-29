@@ -1,4 +1,4 @@
-import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
+import { getEndpointIdByPath, getRawItems } from "../../helpers.js";
 import { createLogger } from "../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
@@ -27,7 +27,7 @@ export async function getEntesRawResponse(): Promise<RawEnte[] | undefined> {
             return undefined;
         }
 
-        const rawResponse = await getRawResponses(endpointId);
+        const rawResponse = await getRawItems(endpointId);
 
         if (!rawResponse) {
             logger.error({  context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o conteúdo bruto do endpoint.`);

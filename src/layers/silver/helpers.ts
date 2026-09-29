@@ -26,14 +26,14 @@ export async function getEndpointIdByPath(path: string): Promise<number | null> 
  * @param endpointId - ID do endpoint para filtrar as respostas no banco
  * @returns Array com todos os itens parseados do JSON ou undefined em caso de erro
  */
-export async function getRawResponses(
+export async function getRawItems(
     endpointId: number
-): Promise<any[] | undefined> {
-    const context = 'getRawResponses';
+): Promise<any[]> {
+    const context = 'getRawItems';
 
     if (!endpointId) {
         logger.error({  context: context }, `[ERRO] 'endpointId' inválido ou não informado.`);
-        return undefined;
+        return [];
     }
 
     try {
@@ -60,7 +60,7 @@ export async function getRawResponses(
         return allItems;
     } catch (error) {
         logger.error({  context: context, data: `Endpoint ID: ${endpointId} | ${error}` }, `[ERRO] Falha ao carregar os dados brutos no banco.`);
-        return undefined;
+        return [];
     }
 }
 

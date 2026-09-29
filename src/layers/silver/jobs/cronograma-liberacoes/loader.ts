@@ -1,5 +1,5 @@
 import { createLogger } from "../../../../services/logs.js";
-import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
+import { getEndpointIdByPath, getRawItems } from "../../helpers.js";
 
 const logger = createLogger(import.meta.url);
 var context: string;
@@ -13,6 +13,6 @@ export async function loadRawCLs(): Promise<any[]> {
         return [];
     }
 
-    const rawData: any[] | undefined = await getRawResponses(endpointId);
+    const rawData: any[] = await getRawItems(endpointId);
     return rawData ?? [];
 }

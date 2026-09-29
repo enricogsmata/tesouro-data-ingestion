@@ -1,4 +1,4 @@
-import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
+import { getEndpointIdByPath, getRawItems } from "../../helpers.js";
 import { createLogger } from "../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
@@ -15,9 +15,9 @@ export async function loadRawPvls(): Promise<any[] | undefined> {
             return undefined;
         }
 
-        const rawResponse = await getRawResponses(endpointId);
+        const rawResponse = await getRawItems(endpointId);
 
-        if (!rawResponse) {
+        if (!rawResponse || rawResponse.length === 0) {
             logger.error({  context: context, data: `ENDPOINT ID ${endpointId}` }, `[ERRO] Não foi possível obter os dados brutos do endpoint`);
             return undefined;
         }

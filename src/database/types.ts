@@ -1,4 +1,4 @@
-import type { apiLinks, cambio, credor, cronogramaLiberacoes, cronogramaPagamentos, dataSources, endpointParameters, endpoints, entes, pvl, rawEndpointResponse } from "./schema.js";
+import type { apiLinks, cambio, credor, cronogramaLiberacoes, cronogramaPagamentos, dataSources, endpointParameters, endpoints, entes, pvl, rawEndpointResponse, resumoCronogramaPagamentos } from "./schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
@@ -34,6 +34,9 @@ export type NewCronogramaLiberacoes = typeof cronogramaLiberacoes.$inferInsert;
 
 export type Cambio = typeof cambio.$inferSelect;
 export type NewCambio = typeof cambio.$inferInsert;
+
+export type ResumoCronogramaPagamentos = typeof resumoCronogramaPagamentos.$inferSelect;
+export type NewResumoCronogramaPagamentos = typeof resumoCronogramaPagamentos.$inferInsert;
 
 export type MappedEndpointWithParams = {
     mappedEndpoint: NewEndpoint,
