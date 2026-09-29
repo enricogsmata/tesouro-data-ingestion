@@ -1,7 +1,5 @@
-import path from "path";
 import axios from "axios";
 import { db } from "../../../database/dbConnection.js";
-import { fileURLToPath } from "url";
 import { apiLinks, endpointParameters, rawEndpointResponse } from "../../../database/schema.js";
 import type { DataSource, Endpoint, EndpointParameter, IApiResponse, NewApiLink } from "../../../database/types.js";
 import { eq } from "drizzle-orm";
@@ -10,6 +8,9 @@ import { createLogger } from "../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Horas
+
+// MODO TEMPORÁRIO DE AMOSTRAGEM PARA MODELAGEM DE DADOS
+const IS_SAMPLING_MODE = true;
 
 /**
  * 
@@ -102,6 +103,12 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
         // Executa o mesmo loop de paginação unificado (seja com ou sem combinação de parâmetros)
         for (const combination of combinations) {
             let currentQueryParams: Record<string, any> = { offset: 0 };
+
+            // Se estiver em modo de amostragem, força limitar o tamanho da resposta na API
+            if (IS_SAMPLING_MODE) {
+                currentQueryParams.limit = 1;
+            }
+
             const combArray = Array.isArray(combination) ? combination : [combination];
 
             paramKeys.forEach((key, index) => {
@@ -131,14 +138,16 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
                 let response: any;
                 const MAX_ATTEMPTS = 5;
                 const RETRY_DELAY_MS = 2000;
-                for (let attempt = 1; attempt < 5; attempt++) {
+
+                // Corrigido a condição do for de attempt < 5 para attempt <= MAX_ATTEMPTS
+                for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                     try {
                         response = await axios.get(fullUrl, config);
                         break;
                     } catch (error: any) {
-                        logger.warn({ context: context, data: `FULL URL: ${fullUrl}` }, `[WARN] Falha na requisição do endpoint: ${attempt} tentativa(s) realizada(s).`);
+                        logger.warn({ context: context, data: `FULL URL: ${fullUrl} | Erro: ${error}` }, `[WARN] Falha na requisição do endpoint: ${attempt} tentativa(s) realizada(s).`);
 
-                        // Se estourar o máximo de tentativas lança erro, se não, aguarda 2 segundos * o número de tentativas realizadas
+                        // Se estourar o máximo de tentativas lança erro, se não, aguarda delay progressivo
                         if (attempt === MAX_ATTEMPTS) { throw error; }
                         else { await new Promise((resolver) => setTimeout(resolver, RETRY_DELAY_MS * attempt)); }
                     }
@@ -172,6 +181,16 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
                 if (!nextHref) {
                     hasNext = false;
                 }
+
+                // AJUSTE TEMPORÁRIO (1/2): Se estiver em modo amostragem, encerra o while da paginação no 1º sucesso
+                if (IS_SAMPLING_MODE) {
+                    hasNext = false;
+                }
+            }
+
+            // AJUSTE TEMPORÁRIO (2/2): Se estiver em modo amostragem, interrompe após processar a 1ª combinação
+            if (IS_SAMPLING_MODE) {
+                break;
             }
         }
     } catch (error: any) {

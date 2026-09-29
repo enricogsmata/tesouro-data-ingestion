@@ -3,6 +3,7 @@ import { db } from "../../database/dbConnection.js";
 import { endpoints } from "../../database/schema.js";
 import { rawEndpointResponse } from "../../database/schema.js";
 import { createLogger } from "../../services/logs.js";
+import { parse } from 'date-fns';
 
 const logger = createLogger(import.meta.url);
 let context: string;
@@ -32,7 +33,7 @@ export async function getRawItems(
     const context = 'getRawItems';
 
     if (!endpointId) {
-        logger.error({  context: context }, `[ERRO] 'endpointId' inválido ou não informado.`);
+        logger.error({ context: context }, `[ERRO] 'endpointId' inválido ou não informado.`);
         return [];
     }
 
@@ -43,7 +44,7 @@ export async function getRawItems(
             .where(eq(rawEndpointResponse.endpointId, endpointId));
 
         if (!rawResponses || rawResponses.length === 0) {
-            logger.warn({  context: context, data: `Endpoint ID: ${endpointId}` }, `[AVISO] Nenhuma resposta bruta encontrada para o endpoint.`);
+            logger.warn({ context: context, data: `Endpoint ID: ${endpointId}` }, `[AVISO] Nenhuma resposta bruta encontrada para o endpoint.`);
             return [];
         }
 
@@ -52,27 +53,31 @@ export async function getRawItems(
             try {
                 return JSON.parse(row.rawItems) as [];
             } catch (parseError) {
-                logger.error({  context: context, data: `${parseError}` }, `[ERRO] Falha ao fazer parse do JSON em raw_items.`);
+                logger.error({ context: context, data: `${parseError}` }, `[ERRO] Falha ao fazer parse do JSON em raw_items.`);
                 return [];
             }
         });
 
         return allItems;
     } catch (error) {
-        logger.error({  context: context, data: `Endpoint ID: ${endpointId} | ${error}` }, `[ERRO] Falha ao carregar os dados brutos no banco.`);
+        logger.error({ context: context, data: `Endpoint ID: ${endpointId} | ${error}` }, `[ERRO] Falha ao carregar os dados brutos no banco.`);
         return [];
     }
 }
 
-export function parseStringToData(sData: string | undefined): Date | undefined {
+export function parseStringToData(sData: string | undefined, format?: string): Date | undefined {
     context = 'parsePvlData';
 
     if (!sData) {
-        logger.error({  context: context }, `[ERRO] A data enviada é indefinida ou nula.`);
+        logger.error({ context: context }, `[ERRO] A data enviada é indefinida ou nula.`);
         return undefined;
     }
 
     try {
+        if (format) {
+            return parse(sData, format, new Date());
+        }
+
         const data = new Date(sData);
         return data;
     } catch (error) {
@@ -81,7 +86,7 @@ export function parseStringToData(sData: string | undefined): Date | undefined {
             const formatedData = `${dataValues.at(-1)}-${dataValues.at(1)}-${dataValues.at(0)}`;
             return new Date(formatedData);
         } catch (error) {
-            logger.error({  context: context, data: JSON.stringify(dataValues, null, 2) }, `[ERRO] Falha ao converter data do protocolo de um pvl.`);
+            logger.error({ context: context, data: JSON.stringify(dataValues, null, 2) }, `[ERRO] Falha ao converter data do protocolo de um pvl.`);
             return undefined;
         }
     }
