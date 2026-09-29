@@ -6,7 +6,7 @@ import { createLogger } from "../../../../services/logs.js";
 const logger = createLogger(import.meta.url);
 var context: string;
 
-export async function persistNewCronogramaPagamentos(newCronPagamentos: NewCronogramaPagamentos[]) {
+export async function persistNewCPs(newCronPagamentos: NewCronogramaPagamentos[]) {
     context = 'persistCronogramaPagamentosEntity';
 
     try {

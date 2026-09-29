@@ -31,8 +31,8 @@ export type RawPvl = {
  * Instancia entidades de pvl a partir de dados brutos extraídos
  * @returns - Conjunto de Pvl's instanciados OU nulo em caso de erro
  */
-export async function buildPvlEntities(rawPvls: RawPvl[] | undefined): Promise<NewPvl[] | null> {
-    context = 'buildPvlEntities';
+export async function transformRawPvl(rawPvls: RawPvl[] | undefined): Promise<NewPvl[] | null> {
+    context = 'transformRawPvl';
     
     if (!rawPvls) {
         logger.error({ context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);

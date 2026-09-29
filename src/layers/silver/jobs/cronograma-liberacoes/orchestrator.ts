@@ -1,5 +1,5 @@
 import { createLogger } from "../../../../services/logs.js";
-import { getCLRawResponses } from "./loader.js";
+import { loadCPRawResponse } from "./loader.js";
 import { persistNewCLs } from "./repository.js";
 import { buildCLEntities } from "./transformer.js";
 
@@ -10,10 +10,10 @@ var context: string;
  * Orquestrador principal da lógica de ETL do Cronograma de Liberações
  * @returns 
  */
-export async function cronogramaLiberacoesOrchestrator() {
-    context = 'cronogramaLiberacoesOrchestrator';
+export async function cronogramaLiberacoesJobOrchestrator() {
+    context = 'cronogramaLiberacoesJobOrchestrator';
 
-    const rawData = await getCLRawResponses();
+    const rawData = await loadCPRawResponse();
     if (!rawData || rawData.length === 0) {
         logger.error({ context: context, data: JSON.stringify(rawData, null, 4) ?? rawData }, `[ERRO] Dados brutos nulos ou vazios.`);
         return;

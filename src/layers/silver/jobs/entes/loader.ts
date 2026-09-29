@@ -17,7 +17,7 @@ export type RawEnte = {
 }
 
 export async function getEntesRawResponse(): Promise<RawEnte[] | undefined> {
-    context = 'getPvlRawResponse';
+    context = 'loadPvlRawResponse';
 
     try {
         const endpointId: number | null = await getEndpointIdByPath("entes");

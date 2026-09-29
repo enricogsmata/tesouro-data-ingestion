@@ -1,5 +1,5 @@
 import type { NewCronogramaPagamentos } from "../../../../database/types.js";
-import { getCronogramaPagamentosRawResponse } from "./loader.js";
+import { loadCPRawResponse } from "./loader.js";
 import { createLogger } from "../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
@@ -20,8 +20,8 @@ type RawCronogramaPagamentos = {
     indicador_div_moeda_estrang: string;
 };
 
-export async function buildCronogramaPagamentosEntities(rawData: any[] | null): Promise<NewCronogramaPagamentos[] | null> {
-    context = 'buildCronogramaPagamentosEntities';
+export async function transformRawCPs(rawData: any[] | null): Promise<NewCronogramaPagamentos[] | null> {
+    context = 'transformRawCPs';
 
     if (!rawData) {
         logger.error({  context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);

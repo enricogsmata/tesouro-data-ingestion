@@ -4,8 +4,8 @@ import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
 const logger = createLogger(import.meta.url);
 var context: string;
 
-export async function getCLRawResponses(): Promise<any[]> {
-    context = 'getCLRawResponses';
+export async function loadCPRawResponse(): Promise<any[]> {
+    context = 'loadCPRawResponse';
 
     const endpointId = await getEndpointIdByPath('cronograma-liberacoes');
     if (!endpointId) {
