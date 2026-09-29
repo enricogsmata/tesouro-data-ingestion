@@ -30,7 +30,7 @@ const logger = createLogger(import.meta.url);
 export async function BuildDataSources(): Promise<NewDataSource[] | null> {
     const context = 'BuildDataSources';
 
-    logger.info({module: module, context: context}, `[INFO] Iniciando descoberta de conjuntos de dados...`);
+    logger.info({ context: context }, `[INFO] Iniciando descoberta de conjuntos de dados...`);
 
     // [TASK 1] Descoberta dos datasets disponíveis na página principal dos datasets no CKAN do Tesouro
     // > Adicionado o search para filtrar por datasets com API disponível
@@ -41,13 +41,13 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 
     // - ERRO -
     if (!discoveredDatasetHrefs) {
-        logger.error({module: module, context: context}, "[ERRO: PASSO 1] A lista de datasets descobertos não foi gerada corretamente.");
+        logger.error({ context: context }, "[ERRO: PASSO 1] A lista de datasets descobertos não foi gerada corretamente.");
         return null;
     }
     // - - -
 
     // - LOGS -
-    logger.debug({module: module, context: context, data: `${discoveredDatasetHrefs.join('\n')}`}, `[1 | SUCESSO] Datasets encontrados: ${discoveredDatasetHrefs.length}`);
+    logger.debug({ context: context, data: `${discoveredDatasetHrefs.join('\n')}` }, `[1 | SUCESSO] Datasets encontrados: ${discoveredDatasetHrefs.length}`);
     // - - -
 
     /* 
@@ -65,13 +65,13 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 
         // - ERRO -
         if (!datasetPageUrl) {
-            logger.error({module: module, context: context}, "[ERRO: PASSO 2] A URL da página do dataset não foi gerada corretamente.");
+            logger.error({ context: context }, "[ERRO: PASSO 2] A URL da página do dataset não foi gerada corretamente.");
             continue;
         }
         // - - -
 
         // - LOG -
-        logger.debug({module: module, context: context, data: `${datasetPageUrl}`}, `[2 | SUCESSO] URL da página do dataset obtido.`);
+        logger.debug({ context: context, data: `${datasetPageUrl}` }, `[2 | SUCESSO] URL da página do dataset obtido.`);
         // - - -
 
         // [TASK 3] Extração do URL da página que contém o link para a página da documentação da API do conjunto de dados
@@ -80,13 +80,13 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 
         // - ERRO -
         if (!datasetApiDocPageUrl) {
-            logger.error({module: module, context: context, data: `HREF: ${discoveredDatasetHref}`}, `[ERRO: PASSO 3] A url para a página da documentação da API do dataset não foi gerada corretamente.`);
+            logger.error({ context: context, data: `HREF: ${discoveredDatasetHref}` }, `[ERRO: PASSO 3] A url para a página da documentação da API do dataset não foi gerada corretamente.`);
             continue;
         }
         // - - -
 
         // - LOG -
-        logger.debug({module: module, context: context, data: datasetApiDocPageUrl}, `[3 | SUCESSO] Url da página de documentação da api obtida.`);
+        logger.debug({ context: context, data: datasetApiDocPageUrl }, `[3 | SUCESSO] Url da página de documentação da api obtida.`);
         // - - -
 
         // [TASK 4] Extração da url do portal (ex: datalake) com os dados do swagger/openapi (url base, endpoints...)
@@ -95,13 +95,13 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 
         // - LOG -
         if (!datasetApiPortalUrl) {
-            logger.error({module: module, context: context, data: `HREF: ${discoveredDatasetHref}`}, `[ERRO: PASSO 4] A url para o portal da API do dataset não foi gerada corretamente.`);
+            logger.error({ context: context, data: `HREF: ${discoveredDatasetHref}` }, `[ERRO: PASSO 4] A url para o portal da API do dataset não foi gerada corretamente.`);
             continue;
         }
         // - - -
 
         // - LOG -
-        logger.debug({module: module, context: context, data: datasetApiPortalUrl}, `[4 | SUCESSO] Url do portal da API obtido.`);
+        logger.debug({ context: context, data: datasetApiPortalUrl }, `[4 | SUCESSO] Url do portal da API obtido.`);
         // - - -
 
         // [TASK 5] Extração dos dados do swagger/openapi e construção do IDataSource (conjunto de dados) tipado em memória
@@ -109,7 +109,7 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 
         // - ERRO -
         if (!datasetApiMetadata) {
-            logger.error({module: module, context: context}, `[ERRO: PASSO 5] Não foi possível obter os dados da API e Endpoints do dataset`);
+            logger.error({ context: context }, `[ERRO: PASSO 5] Não foi possível obter os dados da API e Endpoints do dataset`);
             continue;
         }
         // - - -
@@ -119,7 +119,7 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 
         // - LOG -
         if (!datasetBaseUrl) {
-            logger.error({module: module, context: context, data: `${discoveredDatasetHref}`}, `[ERRO: PASSO 5] Não foi possível obter a URL base do dataset.`);
+            logger.error({ context: context, data: `${discoveredDatasetHref}` }, `[ERRO: PASSO 5] Não foi possível obter a URL base do dataset.`);
             continue;
         }
         // - - -
@@ -129,17 +129,17 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
         // > Cancelamos o processo caso a URL base encontrada já esteja inserida no vetor de conjuntos de dados obtidos.
         // ! Isso evita consulta à mesma API/Endpoints de modo desnecessário/duplicado, economizando processamento e tratamento de dados futuro.
         if (builtDataSources.some(ds => ds.baseUrl === sanitizedBaseUrl)) {
-            logger.debug({module: module, context: context, data: sanitizedBaseUrl}, `[SKIP] URL Base já processada!`);
+            logger.debug({ context: context, data: sanitizedBaseUrl }, `[SKIP] URL Base já processada!`);
             continue;
         }
 
         // - LOG -
-        logger.debug({module: module, context: context, data: `sanitizedBaseUrl`}, `[5 | DATA] Nova url base extraída.`);
+        logger.debug({ context: context, data: `sanitizedBaseUrl` }, `[5 | DATA] Nova url base extraída.`);
         // - - -
 
         // - ERRO -
         if (!datasetApiMetadata['paths']) {
-            logger.error({module: module, context: context, data: `discoveredDatasetHref`}, `[ERRO: PASSO 5] Não foram encontrados paths (endpoints) para a url do dataset.`);
+            logger.error({ context: context, data: `discoveredDatasetHref` }, `[ERRO: PASSO 5] Não foram encontrados paths (endpoints) para a url do dataset.`);
             continue;
         }
         // - - -
@@ -169,7 +169,7 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
 async function discoverAvaliableDataSets(ckanMainPageBaseUrl: URL): Promise<string[] | null> {
     // - LOG -
     const context = 'discoverAvaliableDataSets';
-    logger.info({module: module, context: context , msg: "[INFO] Montando URLs e realizando requisição no axios..."});
+    logger.info({ context: context, msg: "[INFO] Montando URLs e realizando requisição no axios..." });
     // - - -
 
     // > Coleta o conteúdo HTML da página e constrói a url da página do conjunto de dados dinâmicamente
@@ -177,13 +177,13 @@ async function discoverAvaliableDataSets(ckanMainPageBaseUrl: URL): Promise<stri
 
     // - ERRO -
     if (!pageData || pageData.status != 200) {
-        logger.error({module: module, context: context, data: `${ckanMainPageBaseUrl.toString()}`}, `[ERRO] Não foi possível realizar o load da página no cheerio.`);
+        logger.error({ context: context, data: `${ckanMainPageBaseUrl.toString()}` }, `[ERRO] Não foi possível realizar o load da página no cheerio.`);
         return null;
     }
     // - - -
 
     // - LOG -
-    logger.info({module: module, context: context}, "[INFO] Iniciando descoberta de datasets...");
+    logger.info({ context: context }, "[INFO] Iniciando descoberta de datasets...");
     // - - -
 
     let $ = cheerio.load(pageData.data);
@@ -195,7 +195,7 @@ async function discoverAvaliableDataSets(ckanMainPageBaseUrl: URL): Promise<stri
             discoveredDatasetHrefs.push(datasetHref);
         } else {
             // - LOG -
-            logger.error({module: module, context: context}, `[ERRO] Falha ao encontrar o HREF do elemento "dataset-item" no índice ${index}!`);
+            logger.error({ context: context }, `[ERRO] Falha ao encontrar o HREF do elemento "dataset-item" no índice ${index}!`);
             // - - -
         }
     }
@@ -215,7 +215,7 @@ async function BuildDatasetApiPageUrl(discoveredDatasetPageUrl: string): Promise
 
     // - ERRO -
     if (!datasetPageData || datasetPageData.status != 200) {
-        logger.error({module: module, context: context, data: `${discoveredDatasetPageUrl}`}, `[ERRO] Não foi possível obter os dados da página do dataset.`);
+        logger.error({ context: context, data: `${discoveredDatasetPageUrl}` }, `[ERRO] Não foi possível obter os dados da página do dataset.`);
         return null;
     }
     // - - -
@@ -225,7 +225,7 @@ async function BuildDatasetApiPageUrl(discoveredDatasetPageUrl: string): Promise
 
     // - ERRO -
     if (!datasetApiPageHref) {
-        logger.error({module: module, context: context, data: `discoveredDatasetPageUrl`}, `[ERRO] Não foi possível encontrar o link de acesso para a página com o link para a API do dataset.`);
+        logger.error({ context: context, data: `discoveredDatasetPageUrl` }, `[ERRO] Não foi possível encontrar o link de acesso para a página com o link para a API do dataset.`);
         return null;
     }
     // - - -
@@ -244,7 +244,7 @@ async function BuildDatasetApiPortalUrl(discoveredDatasetApiDocPageUrl: string):
 
     // - ERRO -
     if (!apiDocPageData || apiDocPageData.status !== 200) {
-        logger.error({module: module, context: context}, `[ERRO] Não foi possível obter o conteúdo da página.`);
+        logger.error({ context: context }, `[ERRO] Não foi possível obter o conteúdo da página.`);
         return null;
     }
     // - - -
@@ -343,7 +343,7 @@ async function BuildDatasetApiPortalUrl(discoveredDatasetApiDocPageUrl: string):
         }
     }
 
-    logger.error({module: module, context: context, data: `${discoveredDatasetApiDocPageUrl}`}, `[ERRO] Não foi possível obter o link para o portal da API do dataset.`);
+    logger.error({ context: context, data: `${discoveredDatasetApiDocPageUrl}` }, `[ERRO] Não foi possível obter o link para o portal da API do dataset.`);
     return null;
 }
 
@@ -383,8 +383,8 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                 // Confirmação extra se é realmente um objeto de especificação do OpenAPI/Swagger
                 if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
                     apiSpecEncontrada = parsed;
-                    logger.debug({module: module, context: context, data: `${sourceUrl}`}, `[SUCESSO] Especificação capturada na URL.`);
-                    logger.trace({module: module, context: context}, `[INFO] Convertido de JSON com sucesso`);
+                    logger.debug({ context: context, data: `${sourceUrl}` }, `[SUCESSO] Especificação capturada na URL.`);
+                    logger.trace({ context: context }, `[INFO] Convertido de JSON com sucesso`);
                     return true;
                 }
             } catch {
@@ -393,8 +393,8 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                     const parsed = YAML.parse(text);
                     if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
                         apiSpecEncontrada = parsed;
-                        logger.debug({module: module, context: context, data: `${sourceUrl}`}, `[SUCESSO] Especificação capturada na URL`);
-                        logger.trace({module: module, context: context}, `[INFO] Convertido de YAML com sucesso`);
+                        logger.debug({ context: context, data: `${sourceUrl}` }, `[SUCESSO] Especificação capturada na URL`);
+                        logger.trace({ context: context }, `[INFO] Convertido de YAML com sucesso`);
                         return true;
                     }
                 } catch {
@@ -404,8 +404,8 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                         const parsed = YAML.parse(textLimpo);
                         if (parsed && (parsed.openapi || parsed.swagger || parsed.paths)) {
                             apiSpecEncontrada = parsed;
-                            logger.debug({module: module, context: context, data: `${sourceUrl}`}, `[SUCESSO] Especificação capturada na URL.`);
-                            logger.trace({module: module, context: context}, `[INFO] Convertido de YAML (Higienizado) com sucesso!`);
+                            logger.debug({ context: context, data: `${sourceUrl}` }, `[SUCESSO] Especificação capturada na URL.`);
+                            logger.trace({ context: context }, `[INFO] Convertido de YAML (Higienizado) com sucesso!`);
                             return true;
                         }
                     } catch {
@@ -482,7 +482,7 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
         if (!apiSpecEncontrada) {
 
             // - LOG -
-            logger.debug({module: module, context: context}, `[FALLBACK] Tentando extrair especificação ativamente a partir da URL...`);
+            logger.debug({ context: context }, `[FALLBACK] Tentando extrair especificação ativamente a partir da URL...`);
             // - - -
 
             // 1. Garante HTTPS e remove o trecho da hashtag e barras finais
@@ -500,7 +500,7 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
 
                 try {
                     // - LOG -
-                    logger.debug({module: module, context: context, data: `${candidateUrl}`}, `[FALLBACK] Executando fetch ativo.`);
+                    logger.debug({ context: context, data: `${candidateUrl}` }, `[FALLBACK] Executando fetch ativo.`);
                     // - - -
 
                     const fetchResult = await newPage.evaluate(async (targetUrl) => {
@@ -527,7 +527,7 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
         // faz o fetch diretamente pelo Node.js (que ignora bloqueios de navegador)
         if (!apiSpecEncontrada && discoveredDatasetApiPortalUrl) {
             // - LOG -
-            logger.debug({module: module, context: context}, `[FALLBACK] Tentando busca direta via HTTP fora do navegador...`);
+            logger.debug({ context: context }, `[FALLBACK] Tentando busca direta via HTTP fora do navegador...`);
             // - - -
 
             const baseUrlPart = (discoveredDatasetApiPortalUrl || '').split('#')[0] || '';
@@ -540,13 +540,13 @@ async function GetDatasetApiMetadata(discoveredDatasetApiPortalUrl: string, brow
                     tentarParsearSpec(text, candidateUrl);
                 }
             } catch (nodeFetchError) {
-                logger.debug({module: module, context: context, data: `${nodeFetchError}`}, `[FALLBACK] Falha na busca direta via Node.`);
+                logger.debug({ context: context, data: `${nodeFetchError}` }, `[FALLBACK] Falha na busca direta via Node.`);
             }
         }
 
         return apiSpecEncontrada;
     } catch (error) {
-        logger.error({module: module, context: context, data: `URL: ${discoveredDatasetApiPortalUrl} | Detalhes: ${error}`}, `[ERRO] Falha ao processar URL.`);
+        logger.error({ context: context, data: `URL: ${discoveredDatasetApiPortalUrl} | Detalhes: ${error}` }, `[ERRO] Falha ao processar URL.`);
         return null;
     } finally {
         await newPage.close();
@@ -571,7 +571,7 @@ async function LoadAxios(pageUrl: string): Promise<AxiosResponse | null> {
     try {
         return await axios.get(pageUrl);
     } catch (error) {
-        logger.error({module: module, context: context, data: `${error}`}, `[ERRO] Falha no método LoadAxios!`);
+        logger.error({ context: context, data: `${error}` }, `[ERRO] Falha no método LoadAxios!`);
         return null;
     }
 }
@@ -587,7 +587,7 @@ async function BuildDatasetPageUrl(discoveredDatasetHref: string, ckanMainPageBa
     if (datasetPageUrl) {
         return datasetPageUrl.toString();
     } else {
-        logger.error({module: module, context: context, data: `${discoveredDatasetHref}`}, `[ERRO] Não foi possível montar a URL da página do dataset para o dataset.`);
+        logger.error({ context: context, data: `${discoveredDatasetHref}` }, `[ERRO] Não foi possível montar a URL da página do dataset para o dataset.`);
         return null;
     }
 }

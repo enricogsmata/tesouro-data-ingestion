@@ -14,7 +14,7 @@ export async function buildEnteEntities(): Promise<NewEnte[] | null> {
 
     const rawEntes: RawEnte[] | undefined = await getEntesRawResponse();
     if (!rawEntes) {
-        logger.error({ module: module, context: context }, `[ERRO] Dados brutos do endpoint não foram recebidos.`);
+        logger.error({  context: context }, `[ERRO] Dados brutos do endpoint não foram recebidos.`);
         return null;
     }
 

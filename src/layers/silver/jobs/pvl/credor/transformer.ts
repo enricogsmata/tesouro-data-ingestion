@@ -15,7 +15,7 @@ export async function buildOrGetCredorEntity(rawPvl: RawPvl): Promise<number | n
     context = 'buildCredorEntity';
 
     if (!rawPvl) {
-        logger.error({module: module, context: context}, `[ERRO] O objeto "raw pvl" é nulo ou indefinido.`);
+        logger.error({ context: context}, `[ERRO] O objeto "raw pvl" é nulo ou indefinido.`);
         return null;
     }
 
@@ -31,7 +31,7 @@ export async function buildOrGetCredorEntity(rawPvl: RawPvl): Promise<number | n
 
         return await persistNewCredor(newCredor);
     } catch (error) {
-        logger.fatal({module: module, context: context, data: error}, `[ERRO] Ocorreu uma falha ao gerar uma nova entidade de "credor"`);
+        logger.fatal({ context: context, data: error}, `[ERRO] Ocorreu uma falha ao gerar uma nova entidade de "credor"`);
         return null;
     }
 }

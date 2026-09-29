@@ -19,7 +19,7 @@ const logger = createLogger(import.meta.url);
  */
 async function run() {
     const context = 'run';
-    logger.info({ module: module, context: context }, "[STATUS] Iniciando script...");
+    logger.info({ context: context }, "[STATUS] Iniciando script...");
 
     // ========================================
     // 0. SANITIZAÇÃO DE LOGS NO BANCO DE DADOS
@@ -38,7 +38,7 @@ async function run() {
     const dataSourcesList: NewDataSource[] | null = await BuildDataSources();
 
     if (!dataSourcesList) {
-        logger.fatal({ module: module, context: context }, "[ERRO] Falha no seed dos data sources!");
+        logger.fatal({ context: context }, "[ERRO] Falha no seed dos data sources!");
         throw new Error("[ERRO | RUN] Falha no seed dos data sources!");
     }
 
@@ -49,7 +49,7 @@ async function run() {
     // 2. MAPEAMENTO DE ENDPOINTS
     // ==========================
 
-    logger.info({ module: module, context: context, msg: `> Descobrindo endpointsList...` });
+    logger.info({ context: context, msg: `> Descobrindo endpointsList...` });
 
     // ---------------------------------
     // Fluxo de mapeamento dos endpoints
@@ -58,7 +58,7 @@ async function run() {
     const MappedendpointsWithParamsList: MappedEndpointWithParams[] = MapDiscoveredEndpointsInMemory(DataSources);
 
     if (!MappedendpointsWithParamsList) {
-        logger.error({ module: module, context: context }, "[ERRO] Falha no mapeamento dos endpointsList!");
+        logger.error({ context: context }, "[ERRO] Falha no mapeamento dos endpointsList!");
     }
 
     // Persistência dos endpoints e seus parâmetros mapeados
@@ -68,13 +68,13 @@ async function run() {
     // 3. EXTRAÇÃO DOS DADOS "RAW" DOS ENDPOINTS MAPEADOS
     // ==================================================
 
-    logger.info({module: module, context: context}, `> Extraindo dados brutos...`);
+    logger.info({context: context}, `> Extraindo dados brutos...`);
 
     const Endpoints = await db.select().from(endpoints);
 
     await EndpointFetcherOrchestrator(DataSources, Endpoints);
 
-    logger.info({ module: module, context: context }, "[STATUS] Script concluído!");
+    logger.info({ context: context }, "[STATUS] Script concluído!");
     logger.flush();
 }
 
@@ -95,7 +95,7 @@ async function persistDiscoveredDatasources(Datasources: NewDataSource[]) {
             await db.insert(dataSources).values(dataSource);
         }
     } catch (error) {
-        logger.fatal({ module: module, context: context, data: `[INSERT INTO dataSources] | dataSources Count: ${Datasources.length}` }, `[FATAL] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
+        logger.fatal({ context: context, data: `[INSERT INTO dataSources] | dataSources Count: ${Datasources.length}` }, `[FATAL] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
     }
 }
 
@@ -121,7 +121,7 @@ async function persistMappedendpoints(MappedendpointsWithParams: MappedEndpointW
             await persistEndpointParams(mappedEndpointParams, mappedEndpoint, persistedEndpoint);
         }
     } catch (error) {
-        logger.error({ module: module, context: context, data: `[INSERT INTO endpoints]` }, `[ERRO] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
+        logger.error({ context: context, data: `[INSERT INTO endpoints]` }, `[ERRO] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
     }
 }
 
@@ -145,7 +145,7 @@ async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistE
     const [persistedEndpointId] = await db.insert(endpoints).values(mappedEndpoint).$returningId();
 
     if (!persistedEndpointId) {
-        logger.error({ module: module, context: context}, `[ERRO] Falha ao inserir os parâmetros do endpoint mapeado.`);
+        logger.error({ context: context}, `[ERRO] Falha ao inserir os parâmetros do endpoint mapeado.`);
         return null;
     }
 

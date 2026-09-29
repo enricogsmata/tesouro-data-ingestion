@@ -11,20 +11,20 @@ export async function getPvlRawResponse(): Promise<any[] | undefined> {
         const endpointId: number | null = await getEndpointIdByPath("pvl");
 
         if (!endpointId) {
-            logger.error({ module: module, context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o id do endpoint.`);
+            logger.error({  context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o id do endpoint.`);
             return undefined;
         }
 
         const rawResponse = await getRawResponses(endpointId);
 
         if (!rawResponse) {
-            logger.error({ module: module, context: context, data: `ENDPOINT ID ${endpointId}` }, `[ERRO] Não foi possível obter os dados brutos do endpoint`);
+            logger.error({  context: context, data: `ENDPOINT ID ${endpointId}` }, `[ERRO] Não foi possível obter os dados brutos do endpoint`);
             return undefined;
         }
 
         return rawResponse as any[];
     } catch (error) {
-        logger.fatal({ module: module, context: context, data: error }, `[FATAL] Erro ao obter o conteúdo bruto do endpoint.`);
+        logger.fatal({  context: context, data: error }, `[FATAL] Erro ao obter o conteúdo bruto do endpoint.`);
         return undefined;
     }
 }

@@ -10,21 +10,21 @@ export async function getCronogramaPagamentosRawResponse(): Promise<any[] | null
     const endpointId = await getEndpointIdByPath('cronograma-pagamentos');
 
     if (!endpointId) {
-        logger.error({ module: module, context: context }, `[ERRO] Id do endpoint inválido.`);
+        logger.error({  context: context }, `[ERRO] Id do endpoint inválido.`);
         return null;
     }
 
     const rawData = await getRawResponses(endpointId);
 
     if (!rawData) {
-        logger.error({ module: module, context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);
+        logger.error({  context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);
         return null;
     }
 
     try {
         return rawData as any[];
     } catch (error) {
-        logger.error({module: module, context: context, data: `${JSON.stringify(rawData, null, 4)}`}, `[ERRO] Falha ao converter os dados brutos para objeto tipado.`);
+        logger.error({ context: context, data: `${JSON.stringify(rawData, null, 4)}`}, `[ERRO] Falha ao converter os dados brutos para objeto tipado.`);
         return null;
     }
 }

@@ -24,7 +24,7 @@ export async function buildCronogramaPagamentosEntities(rawData: any[] | null): 
     context = 'buildCronogramaPagamentosEntities';
 
     if (!rawData) {
-        logger.error({ module: module, context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);
+        logger.error({  context: context }, `[ERRO] Dados brutos do endpoint inválidos.`);
         return null;
     }
 
@@ -51,7 +51,7 @@ export async function buildCronogramaPagamentosEntities(rawData: any[] | null): 
 
         return newCronPagamentos;
     } catch (error) {
-        logger.error({ module: module, context: context}, `[ERRO] Falha ao gerar entidades do endpoint cronograma de pagamentos.`)
+        logger.error({  context: context}, `[ERRO] Falha ao gerar entidades do endpoint cronograma de pagamentos.`)
         return null;
     }
 }

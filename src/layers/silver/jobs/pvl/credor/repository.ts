@@ -16,7 +16,7 @@ export async function persistNewCredor(newCredor:NewCredor): Promise<number | nu
     context = 'persistNewCredor';
 
     if (!newCredor) {
-        logger.error({module: module, context: context}, `[ERRO] O objeto "new credor" é nulo ou indefinido.`);
+        logger.error({ context: context}, `[ERRO] O objeto "new credor" é nulo ou indefinido.`);
         return null;
     }
 

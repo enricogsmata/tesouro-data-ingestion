@@ -12,6 +12,6 @@ export async function persistNewCronogramaPagamentos(newCronPagamentos: NewCrono
     try {
         await db.insert(cronogramaPagamentos).values(newCronPagamentos);
     } catch (error) {
-        logger.error({ module: module, context: context }, `[ERRO] Falha ao inserir entidade de cronograma de pagamentos no banco de dados.`);
+        logger.error({  context: context }, `[ERRO] Falha ao inserir entidade de cronograma de pagamentos no banco de dados.`);
     }
 }

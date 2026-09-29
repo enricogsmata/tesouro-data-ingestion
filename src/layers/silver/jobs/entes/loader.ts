@@ -23,20 +23,20 @@ export async function getEntesRawResponse(): Promise<RawEnte[] | undefined> {
         const endpointId: number | null = await getEndpointIdByPath("entes");
 
         if (!endpointId) {
-            logger.error({ module: module, context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o id do endpoint.`);
+            logger.error({  context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o id do endpoint.`);
             return undefined;
         }
 
         const rawResponse = await getRawResponses(endpointId);
 
         if (!rawResponse) {
-            logger.error({ module: module, context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o conteúdo bruto do endpoint.`);
+            logger.error({  context: context, data: `Endpoint: pvl` }, `[ERRO] Não foi possível obter o conteúdo bruto do endpoint.`);
             return undefined;
         }
 
         return rawResponse as RawEnte[];
     } catch (error) {
-        logger.fatal({ module: module, context: context, data: error }, `[FATAL] Erro ao obter o conteúdo bruto do endpoint.`);
+        logger.fatal({  context: context, data: error }, `[FATAL] Erro ao obter o conteúdo bruto do endpoint.`);
         return undefined;
     }
 }

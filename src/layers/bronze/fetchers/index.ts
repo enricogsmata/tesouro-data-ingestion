@@ -27,7 +27,7 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
         const pathStr: string = endpoint.path || '';
 
         if (!baseUrl || !pathStr) {
-            logger.error({ module: module, context: context, data: `[BASE URL: ${baseUrl} | PATH: ${pathStr}]` }, `[ERRO] Base Url ou Path não encontrados!`);
+            logger.error({ context: context, data: `[BASE URL: ${baseUrl} | PATH: ${pathStr}]` }, `[ERRO] Base Url ou Path não encontrados!`);
             continue;
         }
 
@@ -36,7 +36,7 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
 
             await EndpointFetcher(fullUrl, endpoint);
         } catch (error: any) {
-            logger.fatal({ module: module, context: context, data: `${error}` }, `[ERRO] Falha ao construir a URL para consulta do endpoint.`);
+            logger.fatal({ context: context, data: `${error}` }, `[ERRO] Falha ao construir a URL para consulta do endpoint.`);
             continue;
         }
     }
@@ -79,7 +79,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
 
             paramKeys = Object.keys(resolvedParams);
             if (paramKeys.length !== requiredParams.length) {
-                logger.error({ module: module, context: context, data: `URL: ${fullUrl} | ${JSON.stringify(requiredParams)}` }, `[ERRO] O endpoint possui parâmetros obrigatórios sem resolver.`);
+                logger.error({ context: context, data: `URL: ${fullUrl} | ${JSON.stringify(requiredParams)}` }, `[ERRO] O endpoint possui parâmetros obrigatórios sem resolver.`);
                 return;
             }
 
@@ -126,10 +126,26 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
                 config.params = currentQueryParams;
 
                 await new Promise((resolve) => setTimeout(resolve, 1200));
-                const response = await axios.get(fullUrl, config);
+
+                // Em caso de erros de conexão, por exemplo, realiza tentativas para buscar evitar a interrupção
+                let response: any;
+                const MAX_ATTEMPTS = 5;
+                const RETRY_DELAY_MS = 2000;
+                for (let attempt = 1; attempt < 5; attempt++) {
+                    try {
+                        response = await axios.get(fullUrl, config);
+                        break;
+                    } catch (error: any) {
+                        logger.warn({ context: context, data: `FULL URL: ${fullUrl}` }, `[WARN] Falha na requisição do endpoint: ${attempt} tentativa(s) realizada(s).`);
+
+                        // Se estourar o máximo de tentativas lança erro, se não, aguarda 2 segundos * o número de tentativas realizadas
+                        if (attempt === MAX_ATTEMPTS) { throw error; }
+                        else { await new Promise((resolver) => setTimeout(resolver, RETRY_DELAY_MS * attempt)); }
+                    }
+                }
 
                 if (!response || response.status !== 200) {
-                    logger.error({ module: module, context: context, data: `Endpoint ID: ${endpoint.id}` }, `[ERRO] Resposta inválida ou status ${response?.status}`);
+                    logger.error({ context: context, data: `Endpoint ID: ${endpoint.id}` }, `[ERRO] Resposta inválida ou status ${response?.status}`);
                     return;
                 }
 
@@ -159,7 +175,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
             }
         }
     } catch (error: any) {
-        logger.error({ module: module, context: context, data: `Full Url: ${fullUrl} | ${error}` }, `[ERRO] Falha ao executar requisição do endpoint.`);
+        logger.error({ context: context, data: `Full Url: ${fullUrl} | ${error}` }, `[ERRO] Falha ao executar requisição do endpoint.`);
         return null;
     }
 }
@@ -194,7 +210,7 @@ async function PersistRawEndpointResponse(response: any, endpointId: number) {
     const responseItems = responseData.items ?? responseData.registros ?? [];
 
     if (responseItems.length === 0) {
-        logger.warn({ module: module, context: context, data: `Endpoint ID: ${endpointId} | ${response.request.url ?? ''}` }, `[INFO] Endpoint vazio/sem itens!`);
+        logger.warn({ context: context, data: `Endpoint ID: ${endpointId} | ${response.request.url ?? ''}` }, `[INFO] Endpoint vazio/sem itens!`);
         return;
     }
 
@@ -233,7 +249,7 @@ async function PersistRawEndpointResponse(response: any, endpointId: number) {
             }
         }
     } catch (error) {
-        logger.error({ module: module, context: context, data: `${error}` }, `[ERRO] Falha ao persistir dados no banco.`);
+        logger.error({ context: context, data: `${error}` }, `[ERRO] Falha ao persistir dados no banco.`);
     }
 }
 
