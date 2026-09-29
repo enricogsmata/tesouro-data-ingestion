@@ -12,8 +12,8 @@ type RawCambio = {
 const logger = createLogger(import.meta.url);
 let context: string;
 
-export async function buildNewCambios(rawData: any[]): Promise<NewCambio[]> {
-    context = 'buildNewCambios';
+export async function transformRawCambios(rawData: any[]): Promise<NewCambio[]> {
+    context = 'transformRawCambios';
     try {
         const parsedData: RawCambio[] = rawData as RawCambio[];
         let newCambios: NewCambio[] = [];

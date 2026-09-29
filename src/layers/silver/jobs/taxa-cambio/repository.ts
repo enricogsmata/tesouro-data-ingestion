@@ -6,7 +6,7 @@ import { createLogger } from "../../../../services/logs.js";
 const logger = createLogger(import.meta.url);
 let context: string;
 
-async function persistNewCambios(newCambios: NewCambio[]) {
+export async function persistNewCambios(newCambios: NewCambio[]) {
     context = 'persistNewCambios';
     try {
         if (newCambios.length > 0) {

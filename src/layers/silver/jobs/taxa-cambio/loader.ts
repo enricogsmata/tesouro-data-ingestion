@@ -15,10 +15,5 @@ export async function loadCambioRawResponse(): Promise<any[]> {
 
     const rawData: any[] | undefined = await getRawResponses(endpointId);
 
-    if (!rawData) {
-        logger.error({ context: context }, `[ERRO] Dados brutos do endpoint indefinidos ou nulos!`);
-        return [];
-    }
-
-    return rawData;
+    return rawData ?? [];
 }
