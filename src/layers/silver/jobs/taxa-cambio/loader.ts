@@ -4,7 +4,7 @@ import { getEndpointIdByPath, getRawResponses } from "../../helpers.js";
 const logger = createLogger(import.meta.url);
 let context: string;
 
-export async function loadCambioRawResponse(): Promise<any[]> {
+export async function loadRawCambios(): Promise<any[]> {
     context = 'getCambioRawResponse';
     const endpointId = await getEndpointIdByPath('taxa-cambio');
 

@@ -4,8 +4,8 @@ import { createLogger } from "../../../../services/logs.js";
 const logger = createLogger(import.meta.url);
 var context: string;
 
-export async function loadCPRawResponse(): Promise<any[] | null> {
-    context = 'loadCPRawResponse';
+export async function loadRawCPs(): Promise<any[] | null> {
+    context = 'loadRawCPs';
 
     const endpointId = await getEndpointIdByPath('cronograma-pagamentos');
 

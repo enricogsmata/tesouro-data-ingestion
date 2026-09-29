@@ -1,5 +1,5 @@
 import type { NewCronogramaPagamentos } from "../../../../database/types.js";
-import { loadCPRawResponse } from "./loader.js";
+import { loadRawCPs } from "./loader.js";
 import { createLogger } from "../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);

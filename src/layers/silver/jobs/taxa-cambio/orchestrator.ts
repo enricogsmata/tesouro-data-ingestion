@@ -1,6 +1,6 @@
 import type { NewCambio } from "../../../../database/types.js";
 import { createLogger } from "../../../../services/logs.js";
-import { loadCambioRawResponse } from "./loader.js";
+import { loadRawCambios } from "./loader.js";
 import { persistNewCambios } from "./repository.js";
 import { transformRawCambios } from "./transformer.js";
 
@@ -9,7 +9,7 @@ let context: string;
 
 export async function cambioJobOrchestrator() {
     context = 'cambioJobOrchestrator';
-    const rawData: any[] = await loadCambioRawResponse();
+    const rawData: any[] = await loadRawCambios();
 
     if (rawData.length === 0) {
         logger.error({ context: context, data: `RAW DATA: ${rawData}` }, `[ERRO] Dados brutos do endpoint inválidos.`);

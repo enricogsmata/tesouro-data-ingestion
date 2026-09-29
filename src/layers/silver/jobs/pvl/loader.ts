@@ -4,8 +4,8 @@ import { createLogger } from "../../../../services/logs.js";
 const logger = createLogger(import.meta.url);
 let context: string;
 
-export async function loadPvlRawResponse(): Promise<any[] | undefined> {
-    context = 'loadPvlRawResponse';
+export async function loadRawPvls(): Promise<any[] | undefined> {
+    context = 'loadRawPvls';
 
     try {
         const endpointId: number | null = await getEndpointIdByPath("pvl");

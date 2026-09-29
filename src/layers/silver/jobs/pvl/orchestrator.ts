@@ -1,6 +1,6 @@
 import type { NewPvl } from "../../../../database/types.js";
 import { createLogger } from "../../../../services/logs.js";
-import { loadPvlRawResponse } from "./loader.js";
+import { loadRawPvls } from "./loader.js";
 import { persistNewPvls } from "./repository.js";
 import { transformRawPvl, type RawPvl } from "./transformer.js";
 
@@ -14,7 +14,7 @@ var context: string;
 export async function pvlJobOrchestrator() {
     context = 'pvlJobOrchestrator';
 
-    const rawPvls: RawPvl[] | undefined = await loadPvlRawResponse();
+    const rawPvls: RawPvl[] | undefined = await loadRawPvls();
     if (!rawPvls || rawPvls.length === 0) {
         logger.error({context: context, data: JSON.stringify(rawPvls, null, 4) ?? rawPvls}, `[ERRO] Dados brutos inválidos.`);
         return;
