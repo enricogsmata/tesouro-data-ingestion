@@ -1,5 +1,5 @@
-import type { NewCambio } from "../../../../database/types.js";
-import { createLogger } from "../../../../services/logs.js";
+import type { NewCambio } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js";
 import { loadRawCambios } from "./loader.js";
 import { persistNewCambios } from "./repository.js";
 import { transformRawCambios } from "./transformer.js";

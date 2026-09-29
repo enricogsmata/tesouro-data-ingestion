@@ -1,6 +1,6 @@
-import type { NewCambio } from "../../../../database/types.js";
-import { createLogger } from "../../../../services/logs.js";
-import { parseStringToData } from "../../helpers.js";
+import type { NewCambio } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js";
+import { parseStringToData } from "../../../helpers.js";
 
 type RawCambio = {
     id_pleito: number,
