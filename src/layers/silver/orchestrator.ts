@@ -4,6 +4,7 @@ import { cronogramaPagamentosJobOrchestrator } from "./jobs/SADIPEM API/cronogra
 import { cambioJobOrchestrator } from "./jobs/SADIPEM API/taxa-cambio/orchestrator.js";
 import { rcpJobOrchestrator } from "./jobs/SADIPEM API/res_cronograma_pagamentos/orchestrator.js";
 import { cdpJobOrchestrator } from "./jobs/SADIPEM API/res-cdp/orchestrator.js";
+import { tramitacaoJobOrchestrator } from "./jobs/SADIPEM API/tramitacao-deferido/orchestrator.js";
 
 /**
  * Orquestrador dos jobs de transformação de cada endpoint bruto em dados tratados,
@@ -15,6 +16,7 @@ export async function jobsOrchestrator() {
     // await cambioJobOrchestrator();
     // await rcpJobOrchestrator();
     // await cdpJobOrchestrator();
+    // await tramitacaoJobOrchestrator();
 }
 
 await jobsOrchestrator();

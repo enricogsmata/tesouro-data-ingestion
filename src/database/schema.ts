@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext } from 'drizzle-orm/mysql-core';
+import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey } from 'drizzle-orm/mysql-core';
 
 // ==========
 // 1. SCHEMAS
@@ -184,17 +184,6 @@ export const cdp = mysqlTable('cdp', {
     situacaoEnte: text('situacao_ente'),
 })
 
-export const resumoGeral = mysqlTable('resumo_geral', {
-    idPleito: int('id_pleito').primaryKey(),
-    ano: text('ano'),
-    snPvlTramitacaoDeferido: char('sn_pvl_tramitacao_deferido', { length: 1 }),
-    contrapartida: float('contrapartida'),
-    liberacao: float('liberacao'),
-    amortizacao: float('amortizacao'),
-    encargos: float('encargos'),
-    total: float('total'),
-})
-
 export const cronogramaLiberacoes = mysqlTable('cronograma_liberacoes', {
     idPleito: int('id_pleito').primaryKey(),
     ano: text('ano'),
@@ -232,11 +221,15 @@ export const contaContabil = mysqlTable('conta_contabil', {
 })
 
 export const depreciacao = mysqlTable('depreciacao', {
-    anLanc: text('an_lanc').primaryKey(),
-    meLanc: text('me_lanc').primaryKey(),
+    anLanc: text('an_lanc').notNull(),
+    meLanc: text('me_lanc').notNull(),
     vaCustoDepreciacao: float('va_custo_depreciacao'),
     codContaContabil: int('cod_conta_contabil').references(() => contaContabil.codContaContabil),
-})
+}, (table) => [
+    primaryKey({
+        columns: [table.anLanc, table.meLanc]
+    })
+])
 
 export const organizacaoN0 = mysqlTable('organizacao_n0', {
     coOrganizacaoN0: int('co_organizacao_n0').primaryKey(),
@@ -310,6 +303,21 @@ export const custoAtivo = mysqlTable('custo_ativo', {
     vaCustoDePessoal: float('va_custo_de_pessoal'),
     inForcaTrabalho: int('in_forca_trabalho'),
 })
+
+export const resumoGeral = mysqlTable('resumo_geral', {
+    idPleito: int('id_pleito').notNull().references(() => pvl.idPleito),
+    ano: text('ano').notNull(),
+    snPvlTramitacaoDeferido: char('sn_pvl_tramitacao_deferido', { length: 1 }),
+    contrapartida: float('contrapartida'),
+    liberacao: float('liberacao'),
+    amortizacao: float('amortizacao'),
+    encargos: float('encargos'),
+    total: float('total'),
+}, (table) => [
+    primaryKey({
+        columns: [table.idPleito, table.ano]
+    })
+])
 
 // ------------------
 // > RELACIONAMENTOS

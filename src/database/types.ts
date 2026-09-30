@@ -1,4 +1,4 @@
-import type { apiLinks, cambio, cdp, contaContabil, credor, cronogramaLiberacoes, cronogramaPagamentos, dataSources, depreciacao, endpointParameters, endpoints, entes, organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6, pvl, rawEndpointResponse, resumoCronogramaPagamentos } from "./schema.js";
+import type { apiLinks, cambio, cdp, contaContabil, credor, cronogramaLiberacoes, cronogramaPagamentos, dataSources, depreciacao, endpointParameters, endpoints, entes, operacoesNaoContratadas, organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6, pvl, rawEndpointResponse, resumoCronogramaPagamentos, resumoGeral } from "./schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
@@ -67,6 +67,12 @@ export type NewOrganizacaoN5 = typeof organizacaoN5.$inferInsert;
 
 export type OrganizacaoN6 = typeof organizacaoN6.$inferSelect;
 export type NewOrganizacaoN6 = typeof organizacaoN6.$inferInsert;
+
+export type ResumoGeral = typeof resumoGeral.$inferSelect;
+export type NewResumoGeral = typeof resumoGeral.$inferInsert;
+
+export type OperacoesNaoContratadas = typeof operacoesNaoContratadas.$inferSelect;
+export type NewOperacoesNaoContratadas = typeof operacoesNaoContratadas.$inferInsert;
 
 export type MappedEndpointWithParams = {
     mappedEndpoint: NewEndpoint,

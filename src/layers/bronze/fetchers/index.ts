@@ -10,7 +10,7 @@ const logger = createLogger(import.meta.url);
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Horas
 
 // MODO TEMPORÁRIO DE AMOSTRAGEM PARA MODELAGEM DE DADOS
-const IS_SAMPLING_MODE = true;
+const IS_SAMPLING_MODE = false;
 
 /**
  * 
