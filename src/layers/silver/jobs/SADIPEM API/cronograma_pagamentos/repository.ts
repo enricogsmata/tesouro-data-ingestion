@@ -10,8 +10,10 @@ export async function persistNewCPs(newCronPagamentos: NewCronogramaPagamentos[]
     context = 'persistCronogramaPagamentosEntity';
 
     try {
-        await db.insert(cronogramaPagamentos).values(newCronPagamentos);
+        await db
+            .insert(cronogramaPagamentos)
+            .values(newCronPagamentos);
     } catch (error) {
-        logger.error({  context: context }, `[ERRO] Falha ao inserir entidade de cronograma de pagamentos no banco de dados.`);
+        logger.error({ context: context }, `[ERRO] Falha ao inserir entidade de cronograma de pagamentos no banco de dados.`);
     }
 }

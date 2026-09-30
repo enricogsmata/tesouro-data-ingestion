@@ -1,0 +1,16 @@
+export type RawOrganizacao = {
+    co_organizacao_n0?: string,
+    ds_organizacao_n0?: string,
+    co_organizacao_n1?: string,
+    ds_organizacao_n1?: string,
+    co_organizacao_n2?: string,
+    ds_organizacao_n2?: string,
+    co_organizacao_n3?: string,
+    ds_organizacao_n3?: string,
+    co_organizacao_n4?: string,
+    ds_organizacao_n4?: string,
+    co_organizacao_n5?: string,
+    ds_organizacao_n5?: string,
+    co_organizacao_n6?: string,
+    ds_organizacao_n6?: string,
+}

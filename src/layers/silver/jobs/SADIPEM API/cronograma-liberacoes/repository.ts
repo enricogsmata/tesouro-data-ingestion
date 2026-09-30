@@ -9,11 +9,13 @@ var context: string;
 export async function persistNewCLs(newCLs: NewCronogramaLiberacoes[]) {
     try {
         if (newCLs.length > 0) {
-            await db.insert(cronogramaLiberacoes).values(newCLs);
+            await db
+                .insert(cronogramaLiberacoes)
+                .values(newCLs);
         } else {
             logger.error({ context: context }, `[ERRO] Falha ao inserir dados no banco: lista de cronogramas vazia!`);
         }
     } catch (error) {
-        logger.error({ context: context, data: JSON.stringify(error, null, 4) ?? error}, `[ERRO] Falha ao inserir dados no banco.`);
+        logger.error({ context: context, data: JSON.stringify(error, null, 4) ?? error }, `[ERRO] Falha ao inserir dados no banco.`);
     }
 }

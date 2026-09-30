@@ -225,6 +225,92 @@ export const resumoCronogramaPagamentos = mysqlTable('resumo_cronograma_pagament
     demaisOperacoes: float('demais_operacoes'),
 })
 
+export const contaContabil = mysqlTable('conta_contabil', {
+    codContaContabil: int('cod_conta_contabil').primaryKey(),
+    descContaContabil: text('desc_conta_contabil'),
+    classeConta: int('classe_conta'),
+})
+
+export const depreciacao = mysqlTable('depreciacao', {
+    anLanc: text('an_lanc').primaryKey(),
+    meLanc: text('me_lanc').primaryKey(),
+    vaCustoDepreciacao: float('va_custo_depreciacao'),
+    codContaContabil: int('cod_conta_contabil').references(() => contaContabil.codContaContabil),
+})
+
+export const organizacaoN0 = mysqlTable('organizacao_n0', {
+    coOrganizacaoN0: int('co_organizacao_n0').primaryKey(),
+    dsOrganizacaoN0: text('ds_organizacao_n0'),
+})
+
+export const organizacaoN1 = mysqlTable('organizacao_n1', {
+    coOrganizacaoN1: int('co_organizacao_n1').primaryKey(),
+    dsOrganizacaoN1: text('ds_organizacao_n1'),
+    coOrganizacaoN0: int('co_organizacao_n0').references(() => organizacaoN0.coOrganizacaoN0),
+})
+
+export const organizacaoN2 = mysqlTable('organizacao_n2', {
+    coOrganizacaoN2: int('co_organizacao_n2').primaryKey(),
+    dsOrganizacaoN2: text('ds_organizacao_n2'),
+    coOrganizacaoN1: int('co_organizacao_n1').references(() => organizacaoN1.coOrganizacaoN1),
+})
+
+export const organizacaoN3 = mysqlTable('organizacao_n3', {
+    coOrganizacaoN3: int('co_organizacao_n3').primaryKey(),
+    dsOrganizacaoN3: text('ds_organizacao_n3'),
+    coOrganizacaoN2: int('co_organizacao_n2').references(() => organizacaoN2.coOrganizacaoN2),
+})
+
+export const organizacaoN4 = mysqlTable('organizacao_n4', {
+    coOrganizacaoN4: int('co_organizacao_n4').primaryKey(),
+    dsOrganizacaoN4: text('ds_organizacao_n4'),
+    coOrganizacaoN3: int('co_organizacao_n3').references(() => organizacaoN3.coOrganizacaoN3),
+})
+
+export const organizacaoN5 = mysqlTable('organizacao_n5', {
+    coOrganizacaoN5: int('co_organizacao_n5').primaryKey(),
+    dsOrganizacaoN5: text('ds_organizacao_n5'),
+    coOrganizacaoN4: int('co_organizacao_n4').references(() => organizacaoN4.coOrganizacaoN4),
+})
+
+export const organizacaoN6 = mysqlTable('organizacao_n6', {
+    coOrganizacaoN6: int('co_organizacao_n6').primaryKey(),
+    dsOrganizacaoN6: text('ds_organizacao_n6'),
+    coOrganizacaoN5: int('co_organizacao_n5').references(() => organizacaoN5.coOrganizacaoN5),
+})
+
+export const escolaridade = mysqlTable('escolaridade', {
+    inEscolaridade: int('in_escolaridade').primaryKey(),
+    dsEscolaridade: text('ds_escolaridade'),
+})
+
+export const faixaEtaria = mysqlTable('faixa_etaria', {
+    inFaixaEtaria: int('in_faixa_etaria').primaryKey(),
+    dsFaixaEtaria: text('ds_faixa_etaria'),
+})
+
+export const sexo = mysqlTable('sexo', {
+    inSexo: char('in_sexo', { length: 1 }).primaryKey(),
+})
+
+export const custoAtivo = mysqlTable('custo_ativo', {
+    codCustoAtivo: int('cod_custo_ativo').primaryKey(),
+    codOrganizacaoN0: int('co_organizacao_n0').references(() => organizacaoN0.coOrganizacaoN0),
+    coOrganizacaoN1: int('co_organizacao_n1').references(() => organizacaoN1.coOrganizacaoN1),
+    coOrganizacaoN2: int('co_organizacao_n2').references(() => organizacaoN2.coOrganizacaoN2),
+    coOrganizacaoN3: int('co_organizacao_n3').references(() => organizacaoN3.coOrganizacaoN3),
+    coOrganizacaoN4: int('co_organizacao_n4').references(() => organizacaoN4.coOrganizacaoN4),
+    coOrganizacaoN5: int('co_organizacao_n5').references(() => organizacaoN5.coOrganizacaoN5),
+    coOrganizacaoN6: int('co_organizacao_n6').references(() => organizacaoN6.coOrganizacaoN6),
+    anLanc: text('an_lanc'),
+    meLanc: text('me_lanc'),
+    inEscolaridade: int('in_escolaridade').references(() => escolaridade.inEscolaridade),
+    inFaixaEtaria: int('in_faixa_etaria').references(() => faixaEtaria.inFaixaEtaria),
+    inSexo: char('in_sexo').references(() => sexo.inSexo),
+    vaCustoDePessoal: float('va_custo_de_pessoal'),
+    inForcaTrabalho: int('in_forca_trabalho'),
+})
+
 // ------------------
 // > RELACIONAMENTOS
 // ------------------

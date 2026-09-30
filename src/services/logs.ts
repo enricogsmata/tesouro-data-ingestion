@@ -47,9 +47,18 @@ const baseLogger = pino(
 );
 
 // 2. Função de fábrica levíssima que apenas injeta o nome do arquivo via .child()
-export function createLogger(importMetaUrl: string): pino.Logger {
+export function createLogger(importMetaUrl: string) {
     const moduleName = path.basename(fileURLToPath(importMetaUrl));
-    return baseLogger.child({ module: moduleName });
+    const logger = baseLogger.child({ module: moduleName });
+
+    return Object.assign(logger, {
+        /**
+         * Retorna uma nova instância do logger já configurada com o método/contexto.
+         */
+        forMethod(methodName: string) {
+            return logger.child({ context: methodName });
+        }
+    });
 }
 
 /**
