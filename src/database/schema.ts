@@ -287,7 +287,7 @@ export const sexo = mysqlTable('sexo', {
 })
 
 export const custoAtivo = mysqlTable('custo_ativo', {
-    codCustoAtivo: int('cod_custo_ativo').primaryKey(),
+    codCustoAtivo: serial('cod_custo_ativo').primaryKey(),
     codOrganizacaoN0: int('co_organizacao_n0').references(() => organizacaoN0.coOrganizacaoN0),
     coOrganizacaoN1: int('co_organizacao_n1').references(() => organizacaoN1.coOrganizacaoN1),
     coOrganizacaoN2: int('co_organizacao_n2').references(() => organizacaoN2.coOrganizacaoN2),
@@ -318,6 +318,8 @@ export const resumoGeral = mysqlTable('resumo_geral', {
         columns: [table.idPleito, table.ano]
     })
 ])
+
+
 
 // ------------------
 // > RELACIONAMENTOS

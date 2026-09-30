@@ -1,4 +1,4 @@
-import type { apiLinks, cambio, cdp, contaContabil, credor, cronogramaLiberacoes, cronogramaPagamentos, dataSources, depreciacao, endpointParameters, endpoints, entes, operacoesNaoContratadas, organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6, pvl, rawEndpointResponse, resumoCronogramaPagamentos, resumoGeral } from "./schema.js";
+import type { apiLinks, cambio, cdp, contaContabil, credor, cronogramaLiberacoes, cronogramaPagamentos, custoAtivo, dataSources, depreciacao, endpointParameters, endpoints, entes, escolaridade, faixaEtaria, operacoesNaoContratadas, organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6, pvl, rawEndpointResponse, resumoCronogramaPagamentos, resumoGeral, sexo } from "./schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
@@ -73,6 +73,18 @@ export type NewResumoGeral = typeof resumoGeral.$inferInsert;
 
 export type OperacoesNaoContratadas = typeof operacoesNaoContratadas.$inferSelect;
 export type NewOperacoesNaoContratadas = typeof operacoesNaoContratadas.$inferInsert;
+
+export type CustoAtivo = typeof custoAtivo.$inferSelect;
+export type NewCustoAtivo = typeof custoAtivo.$inferInsert;
+
+export type Escolaridade = typeof escolaridade.$inferSelect;
+export type NewEscolaridade = typeof escolaridade.$inferInsert;
+
+export type FaixaEtaria = typeof faixaEtaria.$inferSelect;
+export type NewFaixaEtaria = typeof faixaEtaria.$inferInsert;
+
+export type Sexo = typeof sexo.$inferSelect;
+export type NewSexo = typeof sexo.$inferInsert;
 
 export type MappedEndpointWithParams = {
     mappedEndpoint: NewEndpoint,
