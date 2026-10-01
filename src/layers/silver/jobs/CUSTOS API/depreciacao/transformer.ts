@@ -1,8 +1,8 @@
 import type { NewDepreciacao } from "../../../../../database/types.js";
 import { createLogger } from "../../../../../services/logs.js";
 import { transformRawCC } from "./conta_contabil/transformer.js";
-import { transformRawOrganizacoes } from "./organizacao/transform.js";
-import type { RawOrganizacao } from "./organizacao/types.js";
+import { transformRawOrganizacoes } from "../organizacao/transform.js";
+import type { RawOrganizacao } from "../organizacao/types.js";
 
 export type RawDepreciacao = {
     co_natureza_juridica: number,

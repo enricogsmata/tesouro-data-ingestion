@@ -1,7 +1,7 @@
-import { db } from "../../../../../../database/dbConnection.js";
-import { organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6 } from "../../../../../../database/schema.js";
-import type { NewOrganizacaoN0, NewOrganizacaoN1, NewOrganizacaoN2, NewOrganizacaoN3, NewOrganizacaoN4, NewOrganizacaoN5, NewOrganizacaoN6 } from "../../../../../../database/types.js";
-import { createLogger } from "../../../../../../services/logs.js";
+import { db } from "../../../../../database/dbConnection.js";
+import { organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6 } from "../../../../../database/schema.js";
+import type { NewOrganizacaoN0, NewOrganizacaoN1, NewOrganizacaoN2, NewOrganizacaoN3, NewOrganizacaoN4, NewOrganizacaoN5, NewOrganizacaoN6 } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js";
 
 const logger = createLogger(import.meta.url);
 

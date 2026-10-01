@@ -1,5 +1,5 @@
-import type { NewOrganizacaoN0, NewOrganizacaoN1, NewOrganizacaoN2, NewOrganizacaoN3, NewOrganizacaoN4, NewOrganizacaoN5, NewOrganizacaoN6 } from "../../../../../../database/types.js";
-import { createLogger } from "../../../../../../services/logs.js";
+import type { NewOrganizacaoN0, NewOrganizacaoN1, NewOrganizacaoN2, NewOrganizacaoN3, NewOrganizacaoN4, NewOrganizacaoN5, NewOrganizacaoN6 } from "../../../../../database/types.js";
+import { createLogger } from "../../../../../services/logs.js";
 import { persistNewOrgN0, persistNewOrgN1, persistNewOrgN2, persistNewOrgN3, persistNewOrgN4, persistNewOrgN5, persistNewOrgN6 } from "./repository.js";
 import type { RawOrganizacao } from "./types.js";
 
