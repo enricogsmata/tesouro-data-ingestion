@@ -1,6 +1,7 @@
 import axios from "axios";
 import { db } from "../../../database/dbConnection.js";
 import { apiLinks, endpointParameters, rawEndpointResponse } from "../../../database/schema.js";
+import { tablesMap } from "../../../database/utils.js";
 import type { DataSource, Endpoint, EndpointParameter, IApiResponse, NewApiLink } from "../../../database/types.js";
 import { eq } from "drizzle-orm";
 import { parameterResolver } from "./param_mapper.js";
@@ -21,8 +22,20 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
     const context = `EndpointFetcherOrchestrator`;
 
     for (const endpoint of endpoints) {
-        // É feita uma limpa na tabela para os registros do endpoint, garantindo unicidade dos responses
+        // 1. Limpa a tabela genérica para garantir unicidade
         await db.delete(rawEndpointResponse).where(eq(rawEndpointResponse.endpointId, endpoint.id));
+
+        // 2. NOVA LÓGICA: Limpa a tabela alvo (targetTable) exclusiva do endpoint se ela existir
+        if (endpoint.targetTable) {
+            try {
+                const targetSchema = (tablesMap as any)[endpoint.targetTable];
+                if (targetSchema) {
+                    await db.delete(targetSchema); // Remove registros antigos da tabela bruta específica
+                }
+            } catch (error) {
+                logger.warn({ context, data: `${error}` }, `[WARN] Não foi possível limpar a tabela alvo ${endpoint.targetTable}`);
+            }
+        }
 
         const baseUrl: string = DataSources.find(ds => ds.id === endpoint.dataSourceId)?.baseUrl || '';
         const pathStr: string = endpoint.path || '';
@@ -34,7 +47,6 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
 
         try {
             const fullUrl: string = new URL(pathStr, baseUrl).toString();
-
             await EndpointFetcher(fullUrl, endpoint);
         } catch (error: any) {
             logger.fatal({ context: context, data: `${error}` }, `[ERRO] Falha ao construir a URL para consulta do endpoint.`);
@@ -52,7 +64,6 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
 async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
     const context = `EndpointFetcher`;
 
-    // Apenas processa endpoints cujos dados foram inseridos há mais de 24 horas
     const isCached = await isEndpointCached(endpoint.id);
     if (isCached) return;
 
@@ -66,8 +77,8 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
         let paramKeys: string[] = [];
 
         if (requiredParams.length > 0) {
+            /* ... (Lógica de resolução de parâmetros mantida idêntica) ... */
             const resolvedParams: Record<string, any[]> = {};
-
             for (const reqParam of requiredParams) {
                 if (reqParam.name) {
                     const resolverFn = parameterResolver[reqParam.name];
@@ -84,72 +95,47 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
                 return;
             }
 
-            // Função auxiliar de produto cartesiano fortemente tipada
             const cartesian = <T>(args: T[][]): T[][] =>
-                args.reduce<T[][]>(
-                    (acc, curr) => acc.flatMap(d => curr.map(e => [...(Array.isArray(d) ? d : [d]), e])),
-                    [[]]
-                );
+                args.reduce<T[][]>((acc, curr) => acc.flatMap(d => curr.map(e => [...(Array.isArray(d) ? d : [d]), e])), [[]]);
 
             const paramValuesMatrix: any[][] = paramKeys.map(key => resolvedParams[key] ?? []);
-
             if (paramValuesMatrix.length === 0 || !paramValuesMatrix[0]) return;
 
-            combinations = paramValuesMatrix.length === 1
-                ? paramValuesMatrix[0].map(v => [v])
-                : cartesian(paramValuesMatrix);
+            combinations = paramValuesMatrix.length === 1 ? paramValuesMatrix[0].map(v => [v]) : cartesian(paramValuesMatrix);
         }
 
-        // Executa o mesmo loop de paginação unificado (seja com ou sem combinação de parâmetros)
         for (const combination of combinations) {
             let currentQueryParams: Record<string, any> = { offset: 0 };
-
-            // Se estiver em modo de amostragem, força limitar o tamanho da resposta na API
-            if (IS_SAMPLING_MODE) {
-                currentQueryParams.limit = 1;
-            }
+            if (IS_SAMPLING_MODE) currentQueryParams.limit = 1;
 
             const combArray = Array.isArray(combination) ? combination : [combination];
-
-            paramKeys.forEach((key, index) => {
-                currentQueryParams[key] = combArray[index];
-            });
+            paramKeys.forEach((key, index) => { currentQueryParams[key] = combArray[index]; });
 
             let hasNext: boolean = true;
             let nextHref: string | null = null;
 
             while (hasNext) {
-                let config: any = { timeout: 60000 };
+                let config: any = { timeout: 60000, params: currentQueryParams };
 
                 if (nextHref) {
-                    // Extrai apenas os parâmetros do link ORDS para atualizar o offset/limit sem perder os filtros base
                     const parsedNextParams = Object.fromEntries(new URL(nextHref).searchParams);
-                    currentQueryParams = {
-                        ...currentQueryParams,
-                        ...parsedNextParams
-                    };
+                    config.params = { ...currentQueryParams, ...parsedNextParams };
                 }
 
-                config.params = currentQueryParams;
-
                 await new Promise((resolve) => setTimeout(resolve, 1200));
-
-                // Em caso de erros de conexão, por exemplo, realiza tentativas para buscar evitar a interrupção
+                
                 let response: any;
                 const MAX_ATTEMPTS = 5;
                 const RETRY_DELAY_MS = 2000;
 
-                // Corrigido a condição do for de attempt < 5 para attempt <= MAX_ATTEMPTS
                 for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
                     try {
                         response = await axios.get(fullUrl, config);
                         break;
                     } catch (error: any) {
                         logger.warn({ context: context, data: `FULL URL: ${fullUrl} | Erro: ${error}` }, `[WARN] Falha na requisição do endpoint: ${attempt} tentativa(s) realizada(s).`);
-
-                        // Se estourar o máximo de tentativas lança erro, se não, aguarda delay progressivo
-                        if (attempt === MAX_ATTEMPTS) { throw error; }
-                        else { await new Promise((resolver) => setTimeout(resolver, RETRY_DELAY_MS * attempt)); }
+                        if (attempt === MAX_ATTEMPTS) throw error; 
+                        else await new Promise((resolver) => setTimeout(resolver, RETRY_DELAY_MS * attempt));
                     }
                 }
 
@@ -159,7 +145,6 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
                 }
 
                 const responseItems = response.data?.registros ?? response.data?.items ?? [];
-
                 if (responseItems.length === 0) {
                     hasNext = false;
                     break;
@@ -174,24 +159,14 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
 
                 response.request.url = response.request.url ?? fullUrl;
 
-                await PersistRawEndpointResponse(response, endpoint.id);
+                // >>> ALTERAÇÃO CIRÚRGICA: Passando o objeto 'endpoint' completo ao invés de apenas o ID <<<
+                await PersistRawEndpointResponse(response, endpoint);
 
                 nextHref = ckeckIfHasNext(response);
-
-                if (!nextHref) {
-                    hasNext = false;
-                }
-
-                // AJUSTE TEMPORÁRIO (1/2): Se estiver em modo amostragem, encerra o while da paginação no 1º sucesso
-                if (IS_SAMPLING_MODE) {
-                    hasNext = false;
-                }
+                if (!nextHref) hasNext = false;
+                if (IS_SAMPLING_MODE) hasNext = false;
             }
-
-            // AJUSTE TEMPORÁRIO (2/2): Se estiver em modo amostragem, interrompe após processar a 1ª combinação
-            if (IS_SAMPLING_MODE) {
-                break;
-            }
+            if (IS_SAMPLING_MODE) break;
         }
     } catch (error: any) {
         logger.error({ context: context, data: `Full Url: ${fullUrl} | ${error}` }, `[ERRO] Falha ao executar requisição do endpoint.`);
@@ -200,36 +175,18 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
 }
 
 /**
- * 
- * @param endpointId - ID do endpoint cuja requisição foi realizada
- * @returns - True: endpoint inserido há menos de 24 horas | False: caso contrário
- */
-async function isEndpointCached(endpointId: number): Promise<boolean> {
-    const [existingRaw] = await db
-        .select({ generatedAt: rawEndpointResponse.generatedAt })
-        .from(rawEndpointResponse)
-        .where(eq(rawEndpointResponse.endpointId, endpointId));
-
-    if (!existingRaw || !existingRaw.generatedAt) return false;
-
-    const lastAddedTimestamp = Number(existingRaw.generatedAt);
-    return (Date.now() - lastAddedTimestamp) < CACHE_TTL_MS;
-}
-
-/**
  * Persiste o conteúdo bruto do endpoint
  * @param response - Objeto da resposta da requisição no endpoint
- * @param endpointId - ID do endpoint do qual foi feita a requisição
- * @returns - Somente insere registros que possuem itens, portanto retorna quando vazio
+ * @param endpoint - Objeto do endpoint (contendo id e targetTable)
  */
-async function PersistRawEndpointResponse(response: any, endpointId: number) {
+async function PersistRawEndpointResponse(response: any, endpoint: Endpoint) {
     const context = 'PersistRawEndpointResponse';
 
     const responseData = response.data || {};
     const responseItems = responseData.items ?? responseData.registros ?? [];
 
     if (responseItems.length === 0) {
-        logger.warn({ context: context, data: `Endpoint ID: ${endpointId} | ${response.request.url ?? ''}` }, `[INFO] Endpoint vazio/sem itens!`);
+        logger.warn({ context: context, data: `Endpoint ID: ${endpoint.id} | ${response.request.url ?? ''}` }, `[INFO] Endpoint vazio/sem itens!`);
         return;
     }
 
@@ -242,8 +199,9 @@ async function PersistRawEndpointResponse(response: any, endpointId: number) {
             hasMore: responseData["hasMore"] ?? 0
         };
 
+        // 1. INSERÇÃO NA TABELA GENÉRICA MANTIDA
         const [insertedRawEndpoint] = await db.insert(rawEndpointResponse).values({
-            endpointId: endpointId,
+            endpointId: endpoint.id,
             raw_items: JSON.stringify(apiResponse.items, null, 2),
             count: apiResponse.count,
             hasMore: apiResponse.hasMore ? 1 : 0,
@@ -254,7 +212,6 @@ async function PersistRawEndpointResponse(response: any, endpointId: number) {
 
         if (!insertedRawEndpoint) return;
 
-        // Salva os links de navegação se existirem
         if (responseData["links"] && Array.isArray(responseData["links"])) {
             const newapiLinks: NewApiLink[] = responseData["links"].map((link: any) => ({
                 endpointId: insertedRawEndpoint.id,
@@ -262,11 +219,23 @@ async function PersistRawEndpointResponse(response: any, endpointId: number) {
                 rel: link["rel"],
                 generatedAt: new Date(),
             }));
+            if (newapiLinks.length > 0) await db.insert(apiLinks).values(newapiLinks);
+        }
 
-            if (newapiLinks.length > 0) {
-                await db.insert(apiLinks).values(newapiLinks);
+        // 2. NOVA LÓGICA: INSERÇÃO DIRETA NA TABELA ESPECÍFICA (TARGET TABLE)
+        if (endpoint.targetTable) {
+            // Recupera o schema da tabela com base no dicionário importado
+            const targetSchema = (tablesMap as any)[endpoint.targetTable];
+            
+            if (targetSchema) {
+                // O Drizzle faz o bulk insert automaticamente com array de objetos
+                // Se o JSON tiver colunas a mais que o schema, o Drizzle as ignora com segurança
+                await db.insert(targetSchema).values(apiResponse.items);
+            } else {
+                logger.warn({ context, data: `Tabela: ${endpoint.targetTable}` }, `[WARN] Schema não encontrado no tablesMap.`);
             }
         }
+
     } catch (error) {
         logger.error({ context: context, data: `${error}` }, `[ERRO] Falha ao persistir dados no banco.`);
     }
@@ -295,4 +264,21 @@ function ckeckIfHasNext(response: any): string | null {
         }
     }
     return null;
+}
+
+/**
+ * 
+ * @param endpointId - ID do endpoint cuja requisição foi realizada
+ * @returns - True: endpoint inserido há menos de 24 horas | False: caso contrário
+ */
+async function isEndpointCached(endpointId: number): Promise<boolean> {
+    const [existingRaw] = await db
+        .select({ generatedAt: rawEndpointResponse.generatedAt })
+        .from(rawEndpointResponse)
+        .where(eq(rawEndpointResponse.endpointId, endpointId));
+
+    if (!existingRaw || !existingRaw.generatedAt) return false;
+
+    const lastAddedTimestamp = Number(existingRaw.generatedAt);
+    return (Date.now() - lastAddedTimestamp) < CACHE_TTL_MS;
 }

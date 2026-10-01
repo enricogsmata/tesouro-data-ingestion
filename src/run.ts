@@ -65,7 +65,6 @@ async function run() {
     // Persistência dos endpoints e seus parâmetros mapeados
     await persistMappedendpoints(MappedendpointsWithParamsList);
 
-    /*
     // ==================================================
     // 3. EXTRAÇÃO DOS DADOS "RAW" DOS ENDPOINTS MAPEADOS
     // ==================================================
@@ -78,7 +77,6 @@ async function run() {
 
     log.info("[STATUS] Script concluído!");
     log.flush();
-    */
 }
 
 /**

@@ -69,24 +69,24 @@ export const apiLinks = mysqlTable('api_links', {
 });
 
 export const rawDs1SadipemTtPvl = mysqlTable('raw_ds1_sadipem_tt_pvl', {
-    id_pleito: int('id_pleito').primaryKey(),
-    tipo_interessado: varchar('tipo_interessado', { length: 255 }),
-    interessado: varchar('interessado', { length: 255 }),
-    cod_ibge: int('cod_ibge'),
-    uf: varchar('uf', { length: 255 }),
-    num_pvl: varchar('num_pvl', { length: 255 }),
-    status: varchar('status', { length: 255 }),
-    num_processo: varchar('num_processo', { length: 255 }),
-    data_protocolo: varchar('data_protocolo', { length: 255 }),
-    tipo_operacao: varchar('tipo_operacao', { length: 255 }),
-    finalidade: varchar('finalidade', { length: 255 }),
-    tipo_credor: varchar('tipo_credor', { length: 255 }),
-    credor: varchar('credor', { length: 255 }),
-    moeda: varchar('moeda', { length: 255 }),
-    valor: double('valor'),
-    pvl_assoc_divida: int('pvl_assoc_divida'),
-    pvl_contratado_credor: int('pvl_contratado_credor'),
-    data_status: varchar('data_status', { length: 255 }),
+  id_pleito: int('id_pleito').primaryKey(),
+  tipo_interessado: varchar('tipo_interessado', { length: 255 }),
+  interessado: varchar('interessado', { length: 255 }),
+  cod_ibge: int('cod_ibge'),
+  uf: varchar('uf', { length: 255 }),
+  num_pvl: varchar('num_pvl', { length: 255 }),
+  status: varchar('status', { length: 255 }),
+  num_processo: varchar('num_processo', { length: 255 }),
+  data_protocolo: varchar('data_protocolo', { length: 255 }),
+  tipo_operacao: varchar('tipo_operacao', { length: 255 }),
+  finalidade: varchar('finalidade', { length: 255 }),
+  tipo_credor: varchar('tipo_credor', { length: 255 }),
+  credor: varchar('credor', { length: 255 }),
+  moeda: varchar('moeda', { length: 255 }),
+  valor: double('valor'),
+  pvl_assoc_divida: int('pvl_assoc_divida'),
+  pvl_contratado_credor: int('pvl_contratado_credor'),
+  data_status: varchar('data_status', { length: 255 }),
 });
 
 export const rawDs1OpcCronogramaPagamentos = mysqlTable('raw_ds1_opc_cronograma_pagamentos', {
@@ -96,12 +96,12 @@ export const rawDs1OpcCronogramaPagamentos = mysqlTable('raw_ds1_opc_cronograma_
   num_processo: varchar('num_processo', { length: 255 }),
   indicador_liberacoes: varchar('indicador_liberacoes', { length: 255 }),
   ano: varchar('ano', { length: 255 }),
-  divida_consolidada_amortizacao: int('divida_consolidada_amortizacao'),
-  divida_consolidada_encargos: int('divida_consolidada_encargos'),
-  operacoes_contratadas_amortizacao: int('operacoes_contratadas_amortizacao'),
-  operacoes_contratadas_encargos: int('operacoes_contratadas_encargos'),
-  total_amorizacao: int('total_amorizacao'),
-  total_encargos: int('total_encargos'),
+  divida_consolidada_amortizacao: double('divida_consolidada_amortizacao'),
+  divida_consolidada_encargos: double('divida_consolidada_encargos'),
+  operacoes_contratadas_amortizacao: double('operacoes_contratadas_amortizacao'),
+  operacoes_contratadas_encargos: double('operacoes_contratadas_encargos'),
+  total_amorizacao: double('total_amorizacao'),
+  total_encargos: double('total_encargos'),
   indicador_div_moeda_estrang: varchar('indicador_div_moeda_estrang', { length: 255 }),
 });
 
@@ -112,10 +112,10 @@ export const rawDs1OpcCronogramaLiberacoes = mysqlTable('raw_ds1_opc_cronograma_
   num_processo: varchar('num_processo', { length: 255 }),
   indicador_liberacoes: varchar('indicador_liberacoes', { length: 255 }),
   ano: varchar('ano', { length: 255 }),
-  liberacoes_operacoes_sfn: int('liberacoes_operacoes_sfn'),
-  liberacoes_aro: int('liberacoes_aro'),
-  liberacoes_demais: int('liberacoes_demais'),
-  liberacoes_total: int('liberacoes_total'),
+  liberacoes_operacoes_sfn: double('liberacoes_operacoes_sfn'),
+  liberacoes_aro: double('liberacoes_aro'),
+  liberacoes_demais: double('liberacoes_demais'),
+  liberacoes_total: double('liberacoes_total'),
 });
 
 export const rawDs1OpcTaxaCambio = mysqlTable('raw_ds1_opc_taxa_cambio', {
@@ -157,14 +157,14 @@ export const rawDs1PvlTramitacaoDeferido = mysqlTable('raw_ds1_pvl_tramitacao_de
   num_pvl_nao_contratado: varchar('num_pvl_nao_contratado', { length: 255 }),
   num_processo_nao_contratado: varchar('num_processo_nao_contratado', { length: 255 }),
   moeda_pvl_nao_contratado: varchar('moeda_pvl_nao_contratado', { length: 255 }),
-  valor_pvl_nao_contratado: int('valor_pvl_nao_contratado'),
+  valor_pvl_nao_contratado: double('valor_pvl_nao_contratado'),
   status_pvl_nao_contratado: varchar('status_pvl_nao_contratado', { length: 255 }),
   ano_pvl_nao_contratado: varchar('ano_pvl_nao_contratado', { length: 255 }),
-  contrapartida_pvl_nao_contratado: int('contrapartida_pvl_nao_contratado'),
-  liberacao_pvl_nao_contratado: int('liberacao_pvl_nao_contratado'),
-  amortizacao_pvl_nao_contratado: int('amortizacao_pvl_nao_contratado'),
-  encargos_pvl_nao_contratado: int('encargos_pvl_nao_contratado'),
-  liberacoes_pvl_nao_contratado: int('liberacoes_pvl_nao_contratado'),
+  contrapartida_pvl_nao_contratado: double('contrapartida_pvl_nao_contratado'),
+  liberacao_pvl_nao_contratado: double('liberacao_pvl_nao_contratado'),
+  amortizacao_pvl_nao_contratado: double('amortizacao_pvl_nao_contratado'),
+  encargos_pvl_nao_contratado: double('encargos_pvl_nao_contratado'),
+  liberacoes_pvl_nao_contratado: double('liberacoes_pvl_nao_contratado'),
 });
 
 export const rawDs2CustosTtDepreciacao = mysqlTable('raw_ds2_custos_tt_depreciacao', {
@@ -269,7 +269,7 @@ export const rawDs2CustosTtTransferencias = mysqlTable('raw_ds2_custos_tt_transf
   ds_esfera_orcamentaria: varchar('ds_esfera_orcamentaria', { length: 255 }),
   co_resultado_eof: int('co_resultado_eof'),
   ds_resultado_eof: varchar('ds_resultado_eof', { length: 255 }),
-  va_custo_transferencias: int('va_custo_transferencias'),
+  va_custo_transferencias: double('va_custo_transferencias'),
 });
 
 export const rawDs2CustosTtDemais = mysqlTable('raw_ds2_custos_tt_demais', {
@@ -473,8 +473,6 @@ export const rawDs4SiconfiTtExtratoEntregas = mysqlTable('raw_ds4_siconfi_tt_ext
   forma_envio: varchar('forma_envio', { length: 255 }),
   tipo_relatorio: varchar('tipo_relatorio', { length: 255 }),
 });
-
-
 
 // -----------------
 // > RELACIONAMENTOS
