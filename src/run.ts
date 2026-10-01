@@ -1,7 +1,7 @@
-import { BuildDataSources } from "./layers/bronze/discovery/discovery.js";
-import { MapDiscoveredEndpointsInMemory } from "./layers/bronze/discovery/endpoint_mapper.js";
+import { BuildDataSources } from "./pipelines/bronze/discovery/discovery.js";
+import { MapDiscoveredEndpointsInMemory } from "./pipelines/bronze/discovery/endpoint_mapper.js";
 import { db } from './database/dbConnection.js';
-import { EndpointFetcherOrchestrator } from './layers/bronze/fetchers/index.js';
+import { EndpointFetcherOrchestrator } from './pipelines/bronze/fetchers/index.js';
 import { dataSources, endpointParameters, endpoints } from './database/schema.js';
 import type { DataSource, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from './database/types.js';
 import { eq } from 'drizzle-orm';
