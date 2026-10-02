@@ -3,6 +3,7 @@ import { cronogramaLiberacoesOrchestrator } from "./jobs/opc-cronograma-liberaco
 import { cronogramaPagamentosOrchestrator } from "./jobs/opc-cronograma-pagamentos.transformer.js";
 import { taxaCambioOrchestrator } from "./jobs/opc-taxa-cambio.transformer.js";
 import { pvlTransformerOrchestrator } from "./jobs/pvl.transformer.js";
+import { cdpOrchestrator } from "./jobs/res-cdp.transformer.js";
 import { resCronogramaPagamentosOrchestrator } from "./jobs/res-cronograma-pagamentos.transformer.js";
 
 const logger = createLogger(import.meta.url);
@@ -19,4 +20,5 @@ export async function silverOrchestrator() {
     await cronogramaLiberacoesOrchestrator();
     await taxaCambioOrchestrator();
     await resCronogramaPagamentosOrchestrator();
+    await cdpOrchestrator();
 }

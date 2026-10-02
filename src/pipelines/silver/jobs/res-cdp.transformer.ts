@@ -20,7 +20,7 @@ export async function cdpOrchestrator() {
             if (transformed.length > 0) {
                 await save(transformed);
             } else {
-                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Falha no orquestrador.`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Dados tratados inválidos!`);
             }
         }
     } catch (error: any) {
