@@ -1,8 +1,9 @@
+import { sql } from "drizzle-orm";
 import { db } from "../../../database/dbConnection.js";
-import { credor } from "../../../database/schema.js";
+import { Credor } from "../../../database/schema.js";
 import { createLogger } from "../../../services/logs.js";
 
-type NewCredor = typeof credor.$inferInsert;
+type NewCredor = typeof Credor.$inferInsert;
 const logger = createLogger(import.meta.url);
 
 export async function credorTransformerOrchestrator(raw: any): Promise<number | null> {
@@ -12,7 +13,6 @@ export async function credorTransformerOrchestrator(raw: any): Promise<number | 
         const rawCredor: NewCredor = {
             credor: raw.credor,
             tipo: raw.tipo_credor,
-            createdAt: new Date(),
         }
 
         return save(rawCredor);
@@ -23,6 +23,14 @@ export async function credorTransformerOrchestrator(raw: any): Promise<number | 
 }
 
 async function save(rawCredor: NewCredor): Promise<number | null> {
-    const [inserted] = await db.insert(credor).values(rawCredor).$returningId();
-    return inserted?.idCredor ?? null;
+    const [inserted] = await db
+    .insert(Credor)
+    .values(rawCredor)
+    .onDuplicateKeyUpdate({
+        set: {
+            credor: sql`credor`
+        }
+    })
+    .$returningId();
+    return inserted?.id_credor ?? null;
 }

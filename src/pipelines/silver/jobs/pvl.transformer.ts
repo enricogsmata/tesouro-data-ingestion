@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
 import { db } from "../../../database/dbConnection.js";
-import { pvl, rawDs1SadipemTtPvl } from "../../../database/schema.js";
+import { PVL, rawDs1SadipemTtPvl } from "../../../database/schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { parseStringToDate } from "../utils.js";
 import { credorTransformerOrchestrator } from "./credor.transformer.js";
 
 type RawPvl = typeof rawDs1SadipemTtPvl.$inferSelect;
-type NewPvl = typeof pvl.$inferInsert;
+type NewPvl = typeof PVL.$inferInsert;
 const logger = createLogger(import.meta.url);
 
 export async function pvlTransformerOrchestrator() {
@@ -19,8 +19,10 @@ export async function pvlTransformerOrchestrator() {
 
             const transformed: NewPvl[] | null = await transform(raw);
 
-            if (transformed)
-                await save(transformed);
+            if (transformed && transformed.length > 0)
+                await save(transformed); 
+            else
+                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -53,21 +55,20 @@ async function transform(rawPvls: RawPvl[]): Promise<NewPvl[] | null> {
 
             if (idCredor && raw.cod_ibge) {
                 const newPvl: NewPvl = {
-                    codIbge: raw.cod_ibge,
-                    idcredor: idCredor,
-                    dataProtocolo: dataProtocolo,
-                    dataStatus: dataStatus,
+                    cod_ibge: String(raw.cod_ibge),
+                    id_credor: idCredor,
+                    data_protocolo: dataProtocolo,
+                    data_status: dataStatus,
                     finalidade: raw.finalidade,
-                    idPleito: raw.id_pleito,
+                    id_pleito: raw.id_pleito,
                     moeda: raw.moeda,
-                    numProcesso: raw.num_processo,
-                    numpvl: raw.num_pvl,
-                    pvlAssocDivida: raw.pvl_assoc_divida,
+                    num_processo: raw.num_processo,
+                    num_pvl: raw.num_pvl,
+                    pvl_assoc_divida: raw.pvl_assoc_divida,
                     valor: raw.valor,
-                    tipoOperacao: raw.tipo_credor,
-                    pvlContratadocredor: raw.pvl_contratado_credor,
+                    tipo_operacao: raw.tipo_credor,
+                    pvl_contratado_credor: raw.pvl_contratado_credor,
                     status: raw.status,
-                    createdAt: new Date(),
                 }
 
                 if (newPvl)
@@ -75,7 +76,7 @@ async function transform(rawPvls: RawPvl[]): Promise<NewPvl[] | null> {
             }
         }
 
-        return null;
+        return transformed;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar objeto.`);
         return null;
@@ -87,10 +88,10 @@ async function save(transformed: NewPvl[]) {
 
     try {
         await db
-            .insert(pvl)
+            .insert(PVL)
             .values(transformed)
             .onDuplicateKeyUpdate({
-                set: { codIbge: sql`cod_ibge` },
+                set: { cod_ibge: sql`cod_ibge` },
             })
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);

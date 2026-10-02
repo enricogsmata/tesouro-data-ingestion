@@ -1,4 +1,4 @@
-import type { apiLinks, cambio, cdp, contaContabil, credor, cronogramaLiberacoes, cronogramaPagamentos, custoAtivo, dataSources, depreciacao, endpointParameters, endpoints, entes, escolaridade, faixaEtaria, operacoesNaoContratadas, organizacaoN0, organizacaoN1, organizacaoN2, organizacaoN3, organizacaoN4, organizacaoN5, organizacaoN6, pvl, rawEndpointResponse, resumoCronogramaPagamentos, resumoGeral, sexo } from "./schema.js";
+import { apiLinks, dataSources, endpoints, rawEndpointResponse, endpointParameters } from "./schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
