@@ -3,6 +3,8 @@ import { createLogger } from '../../services/logs.js';
 
 const logger = createLogger(import.meta.url);
 
+export const BATCH_SIZE = 1000;
+
 export function parseStringToDate(text: string, format?: string): Date | undefined {
     const log = logger.forMethod('parseStringToDate');
     if (format) {

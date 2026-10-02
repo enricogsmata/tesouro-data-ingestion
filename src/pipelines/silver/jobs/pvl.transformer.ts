@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { db } from "../../../database/dbConnection.js";
 import { PVL, rawDs1SadipemTtPvl } from "../../../database/schema.js";
 import { createLogger } from "../../../services/logs.js";
-import { parseStringToDate } from "../utils.js";
+import { BATCH_SIZE, parseStringToDate } from "../utils.js";
 import { credorTransformerOrchestrator } from "./credor.transformer.js";
 
 type RawPvl = typeof rawDs1SadipemTtPvl.$inferSelect;
@@ -33,7 +33,6 @@ async function load(index: number): Promise<RawPvl[]> {
     const log = logger.forMethod('load');
 
     try {
-        const BATCH_SIZE = 1000;
         const nextOffset = index *= 1000;
         const response = await db.select().from(rawDs1SadipemTtPvl).offset(nextOffset).limit(BATCH_SIZE) as RawPvl[];
         return response;
@@ -89,10 +88,8 @@ async function save(transformed: NewPvl[]) {
     try {
         await db
             .insert(PVL)
+            .ignore()
             .values(transformed)
-            .onDuplicateKeyUpdate({
-                set: { cod_ibge: sql`cod_ibge` },
-            })
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
     }

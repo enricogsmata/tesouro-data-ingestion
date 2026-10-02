@@ -25,12 +25,8 @@ export async function credorTransformerOrchestrator(raw: any): Promise<number | 
 async function save(rawCredor: NewCredor): Promise<number | null> {
     const [inserted] = await db
     .insert(Credor)
+    .ignore()
     .values(rawCredor)
-    .onDuplicateKeyUpdate({
-        set: {
-            credor: sql`credor`
-        }
-    })
     .$returningId();
     return inserted?.id_credor ?? null;
 }
