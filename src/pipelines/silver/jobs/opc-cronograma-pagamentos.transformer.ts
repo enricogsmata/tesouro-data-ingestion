@@ -13,6 +13,8 @@ export async function cronogramaPagamentosOrchestrator() {
     try {
         for (let index = 0; ; index++) {
             const raw: RawCronogramaPagamentos[] = await load(index);
+            if (raw.length === 0) return;
+
             const transformed: NewCronogramaPagamentos[] = await transform(raw);
 
             if (transformed && transformed.length > 0)
