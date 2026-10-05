@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey, foreignKey, double } from 'drizzle-orm/mysql-core';
+import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey, foreignKey, double, uniqueIndex } from 'drizzle-orm/mysql-core';
 
 // ==========
 // 1. SCHEMAS
@@ -541,16 +541,28 @@ export const Credor = mysqlTable('Credor', {
     tipo: varchar('tipo', { length: 255 }),
 });
 
+export const Ente = mysqlTable('Ente', {
+    cod_ibge: int('cod_ibge').primaryKey(),
+    ente: varchar('ente', { length: 255 }),
+    capital: int('capital'),
+    regiao: varchar('regiao', { length: 255 }),
+    uf: char('uf', { length: 2 }),
+    esfera: char('esfera', { length: 1 }),
+    co_cnpj: varchar('co_cnpj', { length: 255 }),
+}, (table) => ({
+    enteUfUniqueIdx: uniqueIndex('ente_uf_unique_idx').on(table.ente, table.uf),
+}));
+
 export const PVL = mysqlTable('PVL', {
     id_pleito: int('id_pleito').primaryKey(),
-    cod_ibge: varchar('cod_ibge', { length: 255 }).notNull(),
+    cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge),
     num_pvl: varchar('num_pvl', { length: 255 }).unique(),
     status: varchar('status', { length: 255 }),
     num_processo: varchar('num_processo', { length: 255 }).unique(),
     data_protocolo: date('data_protocolo'),
     tipo_operacao: varchar('tipo_operacao', { length: 255 }),
     finalidade: varchar('finalidade', { length: 255 }),
-    id_credor: int('id_credor').notNull(),
+    id_credor: int('id_credor'),
     moeda: varchar('moeda', { length: 255 }),
     valor: float('valor'),
     pvl_assoc_divida: int('pvl_assoc_divida'),
@@ -632,3 +644,190 @@ export const Cronograma_Liberacoes = mysqlTable('Cronograma_Liberacoes', {
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
+
+export const Conta_Contabil = mysqlTable('Conta_Contabil', {
+    cod_conta_contabil: int('cod_conta_contabil').primaryKey(),
+    desc_conta_contabil: varchar('desc_conta_contabil', { length: 255 }),
+    classe_conta: int('classe_conta'),
+});
+
+export const Natureza_Juridica = mysqlTable('Natureza_Juridica', {
+    co_natureza_juridica: int('co_natureza_juridica').primaryKey(),
+    ds_natureza_juridica: varchar('ds_natureza_juridica', { length: 255 }),
+});
+
+export const Area_Atuacao = mysqlTable('Area_Atuacao', {
+    in_area_atuacao: int('in_area_atuacao').primaryKey(),
+    ds_area_atuacao: varchar('ds_area_atuacao', { length: 255 }),
+});
+
+export const Organizacao = mysqlTable('Organizacao', {
+    co_organizacao: int('co_organizacao').primaryKey(),
+    ds_organizacao: varchar('ds_organizacao', { length: 255 }),
+    co_natureza_juridica: int('co_natureza_juridica'),
+    nivel_organizacao: int('nivel_organizacao'),
+    co_organizacao_superior: int('co_organizacao_superior'),
+    in_area_atuacao: int('in_area_atuacao').notNull(),
+});
+
+export const Custo_Inativo = mysqlTable('Custo_Inativo', {
+    id_custo_inativo: int('id_custo_inativo').autoincrement().primaryKey(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull(),
+    co_organizacao_n1: int('co_organizacao_n1').notNull(),
+    co_organizacao_n2: int('co_organizacao_n2').notNull(),
+    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    an_lanc: char('an_lanc', { length: 4 }),
+    me_lanc: char('me_lanc', { length: 1 }),
+    va_custo_pessoal_inativo: double('va_custo_pessoal_inativo'),
+}, (table) => ({
+    custoInativoUniqueIdx: uniqueIndex('custo_inativo_unique_idx').on(
+        table.co_organizacao_n0,
+        table.co_organizacao_n1,
+        table.co_organizacao_n2,
+        table.co_organizacao_n3,
+        table.an_lanc,
+        table.me_lanc
+    ),
+}));
+
+export const Custo_Pensionista = mysqlTable('Custo_Pensionista', {
+    id_custo_pensionistas: int('id_custo_pensionistas').autoincrement().primaryKey(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull(),
+    co_organizacao_n1: int('co_organizacao_n1').notNull(),
+    co_organizacao_n2: int('co_organizacao_n2').notNull(),
+    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    an_lanc: char('an_lanc', { length: 4 }),
+    me_lanc: char('me_lanc', { length: 1 }),
+    va_custo_pensionistas: double('va_custo_pensionistas'),
+}, (table) => ({
+    custoPensionistaUniqueIdx: uniqueIndex('custo_pensionista_unique_idx').on(
+        table.co_organizacao_n0,
+        table.co_organizacao_n1,
+        table.co_organizacao_n2,
+        table.co_organizacao_n3,
+        table.an_lanc,
+        table.me_lanc
+    ),
+}));
+
+export const Custo_Depreciacao = mysqlTable('Custo_Depreciacao', {
+    id_depreciacao: int('id_depreciacao').autoincrement().primaryKey(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull(),
+    co_organizacao_n1: int('co_organizacao_n1').notNull(),
+    co_organizacao_n2: int('co_organizacao_n2').notNull(),
+    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    cod_conta_contabil: int('cod_conta_contabil').notNull(),
+    an_lanc: varchar('an_lanc', { length: 255 }),
+    me_lanc: varchar('me_lanc', { length: 255 }),
+    va_custo_depreciacao: double('va_custo_depreciacao'),
+}, (table) => ({
+    custoDepreciacaoUniqueIdx: uniqueIndex('custo_depreciacao_unique_idx').on(
+        table.co_organizacao_n0,
+        table.co_organizacao_n1,
+        table.co_organizacao_n2,
+        table.co_organizacao_n3,
+        table.an_lanc,
+        table.me_lanc,
+        table.cod_conta_contabil
+    ),
+}));
+
+export const Modalidade_Aplicacao = mysqlTable('Modalidade_Aplicacao', {
+    co_modalidade_aplicacao: int('co_modalidade_aplicacao').primaryKey(),
+    ds_modalidade_aplicacao: varchar('ds_modalidade_aplicacao', { length: 255 }),
+});
+
+export const Esfera_Orcamentaria = mysqlTable('Esfera_Orcamentaria', {
+    co_esfera_orcamentaria: int('co_esfera_orcamentaria').primaryKey(),
+    ds_esfera_orcamentaria: varchar('ds_esfera_orcamentaria', { length: 255 }),
+});
+
+export const Resultado_Primario = mysqlTable('Resultado_Primario', {
+    co_resultado_eof: int('co_resultado_eof').primaryKey(),
+    ds_resultado_eof: varchar('ds_resultado_eof', { length: 255 }),
+});
+
+export const Transferencia = mysqlTable('Transferencia', {
+    id_transferencia: int('id_transferencia').autoincrement().primaryKey(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull(),
+    co_organizacao_n1: int('co_organizacao_n1').notNull(),
+    co_organizacao_n2: int('co_organizacao_n2').notNull(),
+    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    co_modalidade_aplicacao: int('co_modalidade_aplicacao').notNull(),
+    co_esfera_orcamentaria: int('co_esfera_orcamentaria').notNull(),
+    co_resultado_eof: int('co_resultado_eof').notNull(),
+    va_custo_transferencias: double('va_custo_transferencias'),
+}, (table) => ({
+    transferenciaUniqueIdx: uniqueIndex('transferencia_unique_idx').on(
+        table.co_organizacao_n0,
+        table.co_organizacao_n1,
+        table.co_organizacao_n2,
+        table.co_organizacao_n3,
+        table.co_modalidade_aplicacao,
+        table.co_esfera_orcamentaria,
+        table.co_resultado_eof
+    ),
+}));
+
+export const Escolaridade = mysqlTable('Escolaridade', {
+    in_escolaridade: int('in_escolaridade').primaryKey(),
+    ds_escolaridade: varchar('ds_escolaridade', { length: 255 }),
+});
+
+export const Faixa_Etaria = mysqlTable('Faixa_Etaria', {
+    in_faixa_etaria: int('in_faixa_etaria').primaryKey(),
+    ds_faixa_etaria: varchar('ds_faixa_etaria', { length: 255 }),
+});
+
+export const Sexo = mysqlTable('Sexo', {
+    in_sexo: char('in_sexo', { length: 1 }).primaryKey(),
+});
+
+export const Custo_Ativo = mysqlTable('Custo_Ativo', {
+    cod_custo_ativo: int('cod_custo_ativo').autoincrement().primaryKey(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull(),
+    co_organizacao_n1: int('co_organizacao_n1').notNull(),
+    co_organizacao_n2: int('co_organizacao_n2').notNull(),
+    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    co_organizacao_n4: int('co_organizacao_n4').notNull(),
+    co_organizacao_n5: int('co_organizacao_n5').notNull(),
+    co_organizacao_n6: int('co_organizacao_n6').notNull(),
+    an_lanc: varchar('an_lanc', { length: 255 }),
+    me_lanc: varchar('me_lanc', { length: 255 }),
+    in_escolaridade: int('in_escolaridade').notNull(),
+    in_faixa_etaria: int('in_faixa_etaria').notNull(),
+    in_sexo: char('in_sexo', { length: 1 }).notNull(),
+    va_custo_de_pessoal: double('va_custo_de_pessoal'),
+    in_forca_trabalho: int('in_forca_trabalho'),
+}, (table) => ({
+    custoAtivoUniqueIdx: uniqueIndex('custo_ativo_unique_idx').on(
+        table.co_organizacao_n0,
+        table.co_organizacao_n1,
+        table.co_organizacao_n2,
+        table.co_organizacao_n3,
+        table.co_organizacao_n4,
+        table.co_organizacao_n5,
+        table.co_organizacao_n6,
+        table.an_lanc,
+        table.me_lanc,
+        table.in_escolaridade,
+        table.in_faixa_etaria,
+        table.in_sexo
+    ),
+}));
+
+export const Situacao_Contabil_Lancamento = mysqlTable('Situacao_Contabil_Lancamento', {
+    co_situacao_icc: int('co_situacao_icc').primaryKey(),
+    no_situacao_icc: varchar('no_situacao_icc', { length: 255 }),
+});
+
+export const Natureza_Despesa_Detalhada = mysqlTable('Natureza_Despesa_Detalhada', {
+    co_natureza_despesa_deta: char('co_natureza_despesa_deta', { length: 8 }).primaryKey(),
+    no_natureza_despesa_deta: varchar('no_natureza_despesa_deta', { length: 255 }),
+    id_categoria_economica_nade: char('id_categoria_economica_nade', { length: 1 }),
+    id_grupo_despesa_nade: char('id_grupo_despesa_nade', { length: 1 }),
+    id_moap_nade: char('id_moap_nade', { length: 2 }).notNull(),
+    id_elemento_despesa_nade: char('id_elemento_despesa_nade', { length: 2 }),
+    id_subitem_nade: char('id_subitem_nade', { length: 2 }),
+});
+

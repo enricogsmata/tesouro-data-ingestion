@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { db } from "../../../database/dbConnection.js";
 import { PVL, rawDs1SadipemTtPvl } from "../../../database/schema.js";
 import { createLogger } from "../../../services/logs.js";
@@ -54,7 +53,7 @@ async function transform(rawPvls: RawPvl[]): Promise<NewPvl[] | null> {
 
             if (idCredor && raw.cod_ibge) {
                 const newPvl: NewPvl = {
-                    cod_ibge: String(raw.cod_ibge),
+                    cod_ibge: raw.cod_ibge,
                     id_credor: idCredor,
                     data_protocolo: dataProtocolo,
                     data_status: dataStatus,
