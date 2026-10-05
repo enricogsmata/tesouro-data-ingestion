@@ -3,6 +3,7 @@ import { Custo_Pensionista, rawDs2CustosTtPensionistas } from "../../../database
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { organizacaoTransformerOrchestrator } from "./organizacao.transformer.js";
+import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
 
 type RawPensionista = typeof rawDs2CustosTtPensionistas.$inferSelect;
 type NewPensionista = typeof Custo_Pensionista.$inferInsert;
@@ -19,9 +20,9 @@ export async function custoPensionistaTransformerOrchestrator() {
             const transformed: NewPensionista[] | null = await transform(raw);
 
             if (transformed && transformed.length > 0)
-                await save(transformed); 
+                await save(transformed);
             else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Lista de dados tratados nula ou vazia.`);
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -47,6 +48,7 @@ async function transform(rawItems: RawPensionista[]): Promise<NewPensionista[] |
     try {
         let transformed: NewPensionista[] = [];
         for (const raw of rawItems) {
+            await naturezaJuridicaTransformerOrchestrator(raw as any);
             const organizacoes = await organizacaoTransformerOrchestrator(raw);
 
             if (
@@ -67,7 +69,7 @@ async function transform(rawItems: RawPensionista[]): Promise<NewPensionista[] |
                     me_lanc: raw.me_lanc.toString(),
                     va_custo_pensionistas: raw.va_custo_pensionistas ?? null,
                 }
-                
+
                 transformed.push(newPensionista);
             }
         }
