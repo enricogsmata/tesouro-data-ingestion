@@ -663,7 +663,7 @@ export const Area_Atuacao = mysqlTable('Area_Atuacao', {
 
 export const Organizacao = mysqlTable('Organizacao', {
     co_organizacao: int('co_organizacao').primaryKey(),
-    ds_organizacao_n0: varchar('ds_organizacao_n0', { length: 255 }),
+    ds_organizacao: varchar('ds_organizacao', { length: 255 }),
     co_natureza_juridica: int('co_natureza_juridica').references(() => Natureza_Juridica.co_natureza_juridica),
     nivel_organizacao: int('nivel_organizacao'),
     co_organizacao_superior: int('co_organizacao_superior').references((): AnyMySqlColumn => Organizacao.co_organizacao),
@@ -817,7 +817,7 @@ export const Custo_Ativo = mysqlTable('Custo_Ativo', {
 }));
 
 export const Situacao_Contabil_Lancamento = mysqlTable('Situacao_Contabil_Lancamento', {
-    co_situacao_icc: int('co_situacao_icc').primaryKey(),
+    co_situacao_icc: varchar('co_situacao_icc', { length: 255 }).primaryKey(),
     no_situacao_icc: varchar('no_situacao_icc', { length: 255 }),
 });
 
@@ -833,9 +833,32 @@ export const Natureza_Despesa_Detalhada = mysqlTable('Natureza_Despesa_Detalhada
 
 export const Demais_Custos = mysqlTable('Demais_Custos', {
     id_demais_custos: int('id_demais_custos').primaryKey(),
+    co_siorg_n05: int('co_siorg_n05').notNull().references(() => Organizacao.co_organizacao),
+    co_siorg_n06: int('co_siorg_n06').notNull().references(() => Organizacao.co_organizacao),
+    co_siorg_n07: int('co_siorg_n07').notNull().references(() => Organizacao.co_organizacao),
+    me_referencia: int('me_referencia'),
+    an_referencia: int('an_referencia'),
+    me_emissao: int('me_emissao'),
+    an_emissao: int('an_emissao'),
+    sg_mes_completo: varchar('sg_mes_completo', { length: 255 }),
+    co_situacao_icc: varchar('co_situacao_icc', { length: 255 }).notNull().references(() => Situacao_Contabil_Lancamento.co_situacao_icc),
+    co_natureza_despesa_deta: char('co_natureza_despesa_deta', { length: 8 }).notNull().references(() => Natureza_Despesa_Detalhada.co_natureza_despesa_deta),
     co_esfera_orcamentaria: int('co_esfera_orcamentaria').notNull().references(() => Esfera_Orcamentaria.co_esfera_orcamentaria),
     co_resultado_eof: int('co_resultado_eof').notNull().references(() => Resultado_Primario.co_resultado_eof),
-    co_natureza_despesa_deta: char('co_natureza_despesa_deta', { length: 8 }).notNull().references(() => Natureza_Despesa_Detalhada.co_natureza_despesa_deta),
-    co_situacao_icc: int('co_situacao_icc').notNull().references(() => Situacao_Contabil_Lancamento.co_situacao_icc),
     va_custo: double('va_custo'),
-});
+}, (table) => ({
+    demaisCustosUniqueIdx: uniqueIndex('demais_custos_unique_idx').on(
+        table.co_siorg_n05,
+        table.co_siorg_n06,
+        table.co_siorg_n07,
+        table.me_referencia,
+        table.an_referencia,
+        table.me_emissao,
+        table.an_emissao,
+        table.sg_mes_completo,
+        table.co_situacao_icc,
+        table.co_natureza_despesa_deta,
+        table.co_esfera_orcamentaria,
+        table.co_resultado_eof
+    ),
+}));
