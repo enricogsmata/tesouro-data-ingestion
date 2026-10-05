@@ -1,4 +1,5 @@
 import { createLogger } from "../../services/logs.js";
+import { custoPensionistaTransformerOrchestrator } from "./jobs/custo_pensionista.transformer.js";
 import { depreciacaoTransformerOrchestrator } from "./jobs/depreciacao.transformer.js";
 import { cronogramaLiberacoesOrchestrator } from "./jobs/opc-cronograma-liberacoes.transformer.js";
 import { cronogramaPagamentosOrchestrator } from "./jobs/opc-cronograma-pagamentos.transformer.js";
@@ -26,4 +27,6 @@ export async function silverOrchestrator() {
     await cdpOrchestrator();
     await tramitacaoDeferidoOrchestrator();
     await depreciacaoTransformerOrchestrator();
+    await custoPensionistaTransformerOrchestrator();
+    
 }
