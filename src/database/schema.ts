@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey, foreignKey, double, uniqueIndex } from 'drizzle-orm/mysql-core';
+import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey, foreignKey, double, uniqueIndex, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
 
 // ==========
 // 1. SCHEMAS
@@ -555,39 +555,39 @@ export const Ente = mysqlTable('Ente', {
 
 export const PVL = mysqlTable('PVL', {
     id_pleito: int('id_pleito').primaryKey(),
-    cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge),
+    cod_ibge: varchar('cod_ibge', { length: 255 }).references(() => Ente.cod_ibge),
     num_pvl: varchar('num_pvl', { length: 255 }).unique(),
     status: varchar('status', { length: 255 }),
     num_processo: varchar('num_processo', { length: 255 }).unique(),
     data_protocolo: date('data_protocolo'),
     tipo_operacao: varchar('tipo_operacao', { length: 255 }),
     finalidade: varchar('finalidade', { length: 255 }),
-    id_credor: int('id_credor'),
+    id_credor: int('id_credor').references(() => Credor.id_credor),
     moeda: varchar('moeda', { length: 255 }),
-    valor: float('valor'),
+    valor: double('valor'),
     pvl_assoc_divida: int('pvl_assoc_divida'),
     pvl_contratado_credor: int('pvl_contratado_credor'),
     data_status: date('data_status'),
 });
 
 export const Operacoes_Nao_Contratadas = mysqlTable('Operacoes_Nao_Contratadas', {
-    id_pleito: int('id_pleito'),
-    id_pleito_nao_contratado: int('id_pleito_nao_contratado'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
+    id_pleito_nao_contratado: int('id_pleito_nao_contratado').references(() => PVL.id_pleito),
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.id_pleito_nao_contratado] }),
 }));
 
 export const Cambio = mysqlTable('Cambio', {
-    id_pleito: int('id_pleito'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     moeda: varchar('moeda', { length: 255 }),
-    taxa_cambio: float('taxa_cambio'),
+    taxa_cambio: double('taxa_cambio'),
     data_taxa_cambio: date('data_taxa_cambio'),
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.moeda] }),
 }));
 
 export const CDP = mysqlTable('CDP', {
-    id_pleito: int('id_pleito'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     data_base: date('data_base'),
     status: varchar('status', { length: 255 }),
     data_status: date('data_status'),
@@ -597,50 +597,50 @@ export const CDP = mysqlTable('CDP', {
 }));
 
 export const Resumo_Geral = mysqlTable('Resumo_Geral', {
-    id_pleito: int('id_pleito'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
-    sn_pvl_tramitacao_deferido: varchar('sn_pvl_tramitacao_deferido', { length: 1 }),
-    contrapartida: float('contrapartida'),
-    liberacao: float('liberacao'),
-    amortizacao: float('amortizacao'),
-    encargos: float('encargos'),
-    total: float('total'),
+    sn_pvl_tramitacao_deferido: char('sn_pvl_tramitacao_deferido', { length: 1 }),
+    contrapartida: double('contrapartida'),
+    liberacao: double('liberacao'),
+    amortizacao: double('amortizacao'),
+    encargos: double('encargos'),
+    total: double('total'),
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
 export const Resumo_Cronograma_Pagamentos = mysqlTable('Resumo_Cronograma_Pagamentos', {
-    id_pleito: int('id_pleito'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
-    operacao_pleiteada: float('operacao_pleiteada'),
-    demais_operacoes: float('demais_operacoes'),
+    operacao_pleiteada: double('operacao_pleiteada'),
+    demais_operacoes: double('demais_operacoes'),
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
 export const Cronograma_Pagamentos = mysqlTable('Cronograma_Pagamentos', {
-    id_pleito: int('id_pleito'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
-    indicador_liberacoes: varchar('indicador_liberacoes', { length: 1 }),
-    divida_consolidada_amortizacao: float('divida_consolidada_amortizacao'),
-    divida_consolidada_encargos: float('divida_consolidada_encargos'),
-    operacoes_contratadas_amortizacao: float('operacoes_contratadas_amortizacao'),
-    operacoes_contratadas_encargos: float('operacoes_contratadas_encargos'),
-    total_amorizacao: float('total_amorizacao'),
-    total_encargos: float('total_encargos'),
-    indicador_div_moeda_estrang: varchar('indicador_div_moeda_estrang', { length: 1 }),
+    indicador_liberacoes: char('indicador_liberacoes', { length: 1 }),
+    divida_consolidada_amortizacao: double('divida_consolidada_amortizacao'),
+    divida_consolidada_encargos: double('divida_consolidada_encargos'),
+    operacoes_contratadas_amortizacao: double('operacoes_contratadas_amortizacao'),
+    operacoes_contratadas_encargos: double('operacoes_contratadas_encargos'),
+    total_amorizacao: double('total_amorizacao'),
+    total_encargos: double('total_encargos'),
+    indicador_div_moeda_estrang: char('indicador_div_moeda_estrang', { length: 1 }),
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
 export const Cronograma_Liberacoes = mysqlTable('Cronograma_Liberacoes', {
-    id_pleito: int('id_pleito'),
+    id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
-    indicador_liberacoes: varchar('indicador_liberacoes', { length: 1 }),
-    liberacoes_operacoes_sfn: float('liberacoes_operacoes_sfn'),
-    liberacoes_aro: float('liberacoes_aro'),
-    liberacoes_demais: float('liberacoes_demais'),
-    liberacoes_total: float('liberacoes_total'),
+    indicador_liberacoes: char('indicador_liberacoes', { length: 1 }),
+    liberacoes_operacoes_sfn: double('liberacoes_operacoes_sfn'),
+    liberacoes_aro: double('liberacoes_aro'),
+    liberacoes_demais: double('liberacoes_demais'),
+    liberacoes_total: double('liberacoes_total'),
 }, (table) => ({
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
@@ -663,19 +663,19 @@ export const Area_Atuacao = mysqlTable('Area_Atuacao', {
 
 export const Organizacao = mysqlTable('Organizacao', {
     co_organizacao: int('co_organizacao').primaryKey(),
-    ds_organizacao: varchar('ds_organizacao', { length: 255 }),
-    co_natureza_juridica: int('co_natureza_juridica'),
+    ds_organizacao_n0: varchar('ds_organizacao_n0', { length: 255 }),
+    co_natureza_juridica: int('co_natureza_juridica').references(() => Natureza_Juridica.co_natureza_juridica),
     nivel_organizacao: int('nivel_organizacao'),
-    co_organizacao_superior: int('co_organizacao_superior'),
-    in_area_atuacao: int('in_area_atuacao').notNull(),
+    co_organizacao_superior: int('co_organizacao_superior').references((): AnyMySqlColumn => Organizacao.co_organizacao),
+    in_area_atuacao: int('in_area_atuacao').notNull().references(() => Area_Atuacao.in_area_atuacao),
 });
 
 export const Custo_Inativo = mysqlTable('Custo_Inativo', {
     id_custo_inativo: int('id_custo_inativo').autoincrement().primaryKey(),
-    co_organizacao_n0: int('co_organizacao_n0').notNull(),
-    co_organizacao_n1: int('co_organizacao_n1').notNull(),
-    co_organizacao_n2: int('co_organizacao_n2').notNull(),
-    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n2: int('co_organizacao_n2').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n3: int('co_organizacao_n3').notNull().references(() => Organizacao.co_organizacao),
     an_lanc: char('an_lanc', { length: 4 }),
     me_lanc: char('me_lanc', { length: 1 }),
     va_custo_pessoal_inativo: double('va_custo_pessoal_inativo'),
@@ -692,10 +692,10 @@ export const Custo_Inativo = mysqlTable('Custo_Inativo', {
 
 export const Custo_Pensionista = mysqlTable('Custo_Pensionista', {
     id_custo_pensionistas: int('id_custo_pensionistas').autoincrement().primaryKey(),
-    co_organizacao_n0: int('co_organizacao_n0').notNull(),
-    co_organizacao_n1: int('co_organizacao_n1').notNull(),
-    co_organizacao_n2: int('co_organizacao_n2').notNull(),
-    co_organizacao_n3: int('co_organizacao_n3').notNull(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n2: int('co_organizacao_n2').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n3: int('co_organizacao_n3').notNull().references(() => Organizacao.co_organizacao),
     an_lanc: char('an_lanc', { length: 4 }),
     me_lanc: char('me_lanc', { length: 1 }),
     va_custo_pensionistas: double('va_custo_pensionistas'),
@@ -712,11 +712,11 @@ export const Custo_Pensionista = mysqlTable('Custo_Pensionista', {
 
 export const Custo_Depreciacao = mysqlTable('Custo_Depreciacao', {
     id_depreciacao: int('id_depreciacao').autoincrement().primaryKey(),
-    co_organizacao_n0: int('co_organizacao_n0').notNull(),
-    co_organizacao_n1: int('co_organizacao_n1').notNull(),
-    co_organizacao_n2: int('co_organizacao_n2').notNull(),
-    co_organizacao_n3: int('co_organizacao_n3').notNull(),
-    cod_conta_contabil: int('cod_conta_contabil').notNull(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n2: int('co_organizacao_n2').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n3: int('co_organizacao_n3').notNull().references(() => Organizacao.co_organizacao),
+    cod_conta_contabil: int('cod_conta_contabil').notNull().references(() => Conta_Contabil.cod_conta_contabil),
     an_lanc: varchar('an_lanc', { length: 255 }),
     me_lanc: varchar('me_lanc', { length: 255 }),
     va_custo_depreciacao: double('va_custo_depreciacao'),
@@ -749,13 +749,13 @@ export const Resultado_Primario = mysqlTable('Resultado_Primario', {
 
 export const Transferencia = mysqlTable('Transferencia', {
     id_transferencia: int('id_transferencia').autoincrement().primaryKey(),
-    co_organizacao_n0: int('co_organizacao_n0').notNull(),
-    co_organizacao_n1: int('co_organizacao_n1').notNull(),
-    co_organizacao_n2: int('co_organizacao_n2').notNull(),
-    co_organizacao_n3: int('co_organizacao_n3').notNull(),
-    co_modalidade_aplicacao: int('co_modalidade_aplicacao').notNull(),
-    co_esfera_orcamentaria: int('co_esfera_orcamentaria').notNull(),
-    co_resultado_eof: int('co_resultado_eof').notNull(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n2: int('co_organizacao_n2').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n3: int('co_organizacao_n3').notNull().references(() => Organizacao.co_organizacao),
+    co_modalidade_aplicacao: int('co_modalidade_aplicacao').references(() => Modalidade_Aplicacao.co_modalidade_aplicacao),
+    co_esfera_orcamentaria: int('co_esfera_orcamentaria').notNull().references(() => Esfera_Orcamentaria.co_esfera_orcamentaria),
+    co_resultado_eof: int('co_resultado_eof').notNull().references(() => Resultado_Primario.co_resultado_eof),
     va_custo_transferencias: double('va_custo_transferencias'),
 }, (table) => ({
     transferenciaUniqueIdx: uniqueIndex('transferencia_unique_idx').on(
@@ -785,18 +785,18 @@ export const Sexo = mysqlTable('Sexo', {
 
 export const Custo_Ativo = mysqlTable('Custo_Ativo', {
     cod_custo_ativo: int('cod_custo_ativo').autoincrement().primaryKey(),
-    co_organizacao_n0: int('co_organizacao_n0').notNull(),
-    co_organizacao_n1: int('co_organizacao_n1').notNull(),
-    co_organizacao_n2: int('co_organizacao_n2').notNull(),
-    co_organizacao_n3: int('co_organizacao_n3').notNull(),
-    co_organizacao_n4: int('co_organizacao_n4').notNull(),
-    co_organizacao_n5: int('co_organizacao_n5').notNull(),
-    co_organizacao_n6: int('co_organizacao_n6').notNull(),
+    co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n2: int('co_organizacao_n2').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n3: int('co_organizacao_n3').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n4: int('co_organizacao_n4').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n5: int('co_organizacao_n5').notNull().references(() => Organizacao.co_organizacao),
+    co_organizacao_n6: int('co_organizacao_n6').notNull().references(() => Organizacao.co_organizacao),
     an_lanc: varchar('an_lanc', { length: 255 }),
     me_lanc: varchar('me_lanc', { length: 255 }),
-    in_escolaridade: int('in_escolaridade').notNull(),
-    in_faixa_etaria: int('in_faixa_etaria').notNull(),
-    in_sexo: char('in_sexo', { length: 1 }).notNull(),
+    in_escolaridade: int('in_escolaridade').notNull().references(() => Escolaridade.in_escolaridade),
+    in_faixa_etaria: int('in_faixa_etaria').notNull().references(() => Faixa_Etaria.in_faixa_etaria),
+    in_sexo: char('in_sexo', { length: 1 }).notNull().references(() => Sexo.in_sexo),
     va_custo_de_pessoal: double('va_custo_de_pessoal'),
     in_forca_trabalho: int('in_forca_trabalho'),
 }, (table) => ({
@@ -826,8 +826,16 @@ export const Natureza_Despesa_Detalhada = mysqlTable('Natureza_Despesa_Detalhada
     no_natureza_despesa_deta: varchar('no_natureza_despesa_deta', { length: 255 }),
     id_categoria_economica_nade: char('id_categoria_economica_nade', { length: 1 }),
     id_grupo_despesa_nade: char('id_grupo_despesa_nade', { length: 1 }),
-    id_moap_nade: char('id_moap_nade', { length: 2 }).notNull(),
+    id_moap_nade: char('id_moap_nade', { length: 2 }).notNull().references(() => Modalidade_Aplicacao.co_modalidade_aplicacao),
     id_elemento_despesa_nade: char('id_elemento_despesa_nade', { length: 2 }),
     id_subitem_nade: char('id_subitem_nade', { length: 2 }),
 });
 
+export const Demais_Custos = mysqlTable('Demais_Custos', {
+    id_demais_custos: int('id_demais_custos').primaryKey(),
+    co_esfera_orcamentaria: int('co_esfera_orcamentaria').notNull().references(() => Esfera_Orcamentaria.co_esfera_orcamentaria),
+    co_resultado_eof: int('co_resultado_eof').notNull().references(() => Resultado_Primario.co_resultado_eof),
+    co_natureza_despesa_deta: char('co_natureza_despesa_deta', { length: 8 }).notNull().references(() => Natureza_Despesa_Detalhada.co_natureza_despesa_deta),
+    co_situacao_icc: int('co_situacao_icc').notNull().references(() => Situacao_Contabil_Lancamento.co_situacao_icc),
+    va_custo: double('va_custo'),
+});
