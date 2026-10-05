@@ -18,10 +18,16 @@ const IS_SAMPLING_MODE = false;
  * @param DataSources - Conjunto de fontes de dados extraídos na página do CKAN
  * @param endpoints - Conjunto de endpoint extraídos das fontes de dados do CKAN
  */
-export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[]) {
+export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[], startEndpointId?: number) {
     const context = `EndpointFetcherOrchestrator`;
 
-    for (const endpoint of endpoints) {
+    // Garante que a lista esteja ordenada por ID e filtra se startEndpointId for informado
+    const targetEndpoints = (startEndpointId && startEndpointId > 1
+        ? endpoints.filter(ep => ep.id >= startEndpointId)
+        : endpoints
+    ).slice().sort((a, b) => a.id - b.id);
+
+    for (const endpoint of targetEndpoints) {
         // 1. Limpa a tabela genérica para garantir unicidade
         await db.delete(rawEndpointResponse).where(eq(rawEndpointResponse.endpointId, endpoint.id));
 
@@ -46,6 +52,10 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
         }
 
         try {
+            logger.info(
+                { context, data: `[ID: ${endpoint.id} | Path: ${pathStr}]` },
+                `> [ENDPOINT ${endpoint.id}] Extraindo dados: ${pathStr}`
+            );
             const fullUrl: string = new URL(pathStr, baseUrl).toString();
             await EndpointFetcher(fullUrl, endpoint);
         } catch (error: any) {

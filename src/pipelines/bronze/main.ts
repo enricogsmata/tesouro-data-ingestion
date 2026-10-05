@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { asc, eq, gte } from "drizzle-orm";
 import { db } from "../../database/dbConnection.js";
 import { dataSources, endpointParameters, endpoints } from "../../database/schema.js";
-import type { DataSource, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from "../../database/types.js";
+import type { DataSource, Endpoint, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from "../../database/types.js";
 import { createLogger } from "../../services/logs.js";
 import { BuildDataSources } from "./discovery/discovery.js";
 import { MapDiscoveredEndpointsInMemory } from "./discovery/endpoint_mapper.js";
@@ -14,53 +14,93 @@ type PersistEndpointResponse = {
 
 const logger = createLogger(import.meta.url);
 
-export async function bronzeOrchestrator() {
+export interface BronzeOrchestratorOptions {
+    skipDiscovery?: boolean | undefined;
+    startEndpointId?: number | undefined;
+}
+
+export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
     const log = logger.forMethod(`bronzeOrchestrator`);
+    const skipDiscovery = options?.skipDiscovery ?? false;
+    const startEndpointId = options?.startEndpointId;
 
-    // ===================================
-    // 1. DESCOBERTA DE CONJUNTOS DE DADOS
-    // ===================================
-    log.info(`> Descobrindo conjuntos de dados...`);
+    let DataSources: DataSource[];
 
-    // -------------------------------------------------------------
-    // Fluxo de scraping do CKAN e descoberta dos conjuntos de dados
-    // -------------------------------------------------------------
-    const dataSourcesList: NewDataSource[] | null = await BuildDataSources();
+    if (!skipDiscovery) {
+        // ===================================
+        // 1. DESCOBERTA DE CONJUNTOS DE DADOS
+        // ===================================
+        log.info(`> Descobrindo conjuntos de dados...`);
 
-    if (!dataSourcesList) {
-        log.fatal("[ERRO] Falha no seed dos data sources!");
-        throw new Error("[ERRO | RUN] Falha no seed dos data sources!");
+        // -------------------------------------------------------------
+        // Fluxo de scraping do CKAN e descoberta dos conjuntos de dados
+        // -------------------------------------------------------------
+        const dataSourcesList: NewDataSource[] | null = await BuildDataSources();
+
+        if (!dataSourcesList) {
+            log.fatal("[ERRO] Falha no seed dos data sources!");
+            throw new Error("[ERRO | RUN] Falha no seed dos data sources!");
+        }
+
+        // Persistência dos conjuntos de dados extraídos do CKAN 
+        await persistDiscoveredDatasources(dataSourcesList);
+
+        // ==========================
+        // 2. MAPEAMENTO DE ENDPOINTS
+        // ==========================
+        log.info({ msg: `> Descobrindo endpointsList...` });
+
+        // ---------------------------------
+        // Fluxo de mapeamento dos endpoints
+        // ---------------------------------
+        DataSources = await db.select().from(dataSources) as DataSource[];
+        const MappedendpointsWithParamsList: MappedEndpointWithParams[] = MapDiscoveredEndpointsInMemory(DataSources);
+
+        if (!MappedendpointsWithParamsList) {
+            log.error("[ERRO] Falha no mapeamento dos endpointsList!");
+        }
+
+        // Persistência dos endpoints e seus parâmetros mapeados
+        await persistMappedendpoints(MappedendpointsWithParamsList);
+    } else {
+        log.info(`> Etapa de Discovery ignorada (skipDiscovery = true).`);
+        DataSources = await db.select().from(dataSources) as DataSource[];
+
+        if (!DataSources || DataSources.length === 0) {
+            log.fatal("[ERRO] Nenhuma fonte de dados (dataSources) encontrada no banco de dados para realizar o fetch!");
+            throw new Error("[ERRO | RUN] Nenhuma fonte de dados encontrada no banco. Execute o discovery primeiro.");
+        }
     }
-
-    // Persistência dos conjuntos de dados extraídos do CKAN 
-    await persistDiscoveredDatasources(dataSourcesList);
-
-    // ==========================
-    // 2. MAPEAMENTO DE ENDPOINTS
-    // ==========================
-    log.info({ msg: `> Descobrindo endpointsList...` });
-
-    // ---------------------------------
-    // Fluxo de mapeamento dos endpoints
-    // ---------------------------------
-    const DataSources = await db.select().from(dataSources) as DataSource[];
-    const MappedendpointsWithParamsList: MappedEndpointWithParams[] = MapDiscoveredEndpointsInMemory(DataSources);
-
-    if (!MappedendpointsWithParamsList) {
-        log.error("[ERRO] Falha no mapeamento dos endpointsList!");
-    }
-
-    // Persistência dos endpoints e seus parâmetros mapeados
-    await persistMappedendpoints(MappedendpointsWithParamsList);
 
     // ==================================================
     // 3. EXTRAÇÃO DOS DADOS "RAW" DOS ENDPOINTS MAPEADOS
     // ==================================================
     log.info(`> Extraindo dados brutos...`);
 
-    const Endpoints = await db.select().from(endpoints);
+    let Endpoints: Endpoint[];
 
-    await EndpointFetcherOrchestrator(DataSources, Endpoints);
+    if (startEndpointId && startEndpointId > 1) {
+        log.info(`> Filtrando endpoints a partir do ID ${startEndpointId}...`);
+        Endpoints = await db
+            .select()
+            .from(endpoints)
+            .where(gte(endpoints.id, startEndpointId))
+            .orderBy(asc(endpoints.id));
+    } else {
+        Endpoints = await db
+            .select()
+            .from(endpoints)
+            .orderBy(asc(endpoints.id));
+    }
+
+    if (Endpoints.length === 0) {
+        log.warn(`[AVISO] Nenhum endpoint encontrado para extração (a partir do ID ${startEndpointId ?? 1}).`);
+        return;
+    }
+
+    log.info(`> Total de endpoints a serem processados: ${Endpoints.length} (Iniciando em ID: ${Endpoints[0]!.id}, Path: "${Endpoints[0]!.path}")`);
+
+    await EndpointFetcherOrchestrator(DataSources, Endpoints, startEndpointId);
 }
 
 /**

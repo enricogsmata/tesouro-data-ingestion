@@ -3,6 +3,7 @@ import { Custo_Depreciacao, rawDs2CustosTtDepreciacao } from "../../../database/
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { contaContabilTransformerOrchestrator } from "./conta-contabil.transformer.js";
+import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
 import { organizacaoTransformerOrchestrator, type Organizacoes } from "./organizacao.transformer.js";
 
 export type RawDepreciacao = typeof rawDs2CustosTtDepreciacao.$inferSelect;
@@ -10,7 +11,7 @@ type NewCustoDepreciacao = typeof Custo_Depreciacao.$inferInsert;
 
 const logger = createLogger(import.meta.url);
 
-export async function depreciacaoOrchestrator() {
+export async function depreciacaoTransformerOrchestrator() {
     const log = logger.forMethod('depreciacaoOrchestrator');
 
     try {
@@ -53,6 +54,7 @@ async function transform(raw: RawDepreciacao[]): Promise<NewCustoDepreciacao[]> 
         for (const item of raw) {
             const organizacoes: Organizacoes | null = await organizacaoTransformerOrchestrator(item);
             const codContaContabil: number | null = await contaContabilTransformerOrchestrator(item);
+            await naturezaJuridicaTransformerOrchestrator(item);
 
             if (organizacoes && codContaContabil) {
                 const newCustoDepreciacao: NewCustoDepreciacao = {
@@ -83,9 +85,9 @@ async function save(transformed: NewCustoDepreciacao[]) {
     const log = logger.forMethod('save');
     try {
         await db
-        .insert(Custo_Depreciacao)
-        .values(transformed);
+            .insert(Custo_Depreciacao)
+            .values(transformed);
     } catch (error: any) {
-        log.fatal({data: JSON.stringify(error, null, 4)}, `Falha na persistência.`);
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
     }
 }
