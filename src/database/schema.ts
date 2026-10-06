@@ -1,5 +1,5 @@
 import { relations } from 'drizzle-orm';
-import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey, foreignKey, double, uniqueIndex, type AnyMySqlColumn } from 'drizzle-orm/mysql-core';
+import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, bigint, longtext, primaryKey, foreignKey, double, uniqueIndex, type AnyMySqlColumn, datetime } from 'drizzle-orm/mysql-core';
 
 // ==========
 // 1. SCHEMAS
@@ -340,6 +340,7 @@ export const rawDs4SiconfiTtRreo = mysqlTable('raw_ds4_siconfi_tt_rreo', {
     uf: varchar('uf', { length: 255 }),
     populacao: int('populacao'),
     anexo: varchar('anexo', { length: 255 }),
+    esfera: varchar('esfera', { length: 255 }),
     rotulo: varchar('rotulo', { length: 255 }),
     coluna: varchar('coluna', { length: 255 }),
     cod_conta: varchar('cod_conta', { length: 255 }),
@@ -862,3 +863,144 @@ export const Demais_Custos = mysqlTable('Demais_Custos', {
         table.co_resultado_eof
     ),
 }));
+
+export const Instituição = mysqlTable('Instituição', {
+    id: serial('id').primaryKey(),
+    instituicao: varchar('instituicao', { length: 255 }),
+    co_poder: char('co_poder', { length: 1 }),
+    cod_ibge: int('cod_ibge').notNull().references(() => Ente.cod_ibge),
+});
+
+export const Populacao_Anual_Ente = mysqlTable('Populacao_Anual_Ente', {
+    cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge),
+    ano_exercicio: int('ano_exercicio'),
+    populacao: int('populacao'),
+}, (table) => ({
+    pk: primaryKey({ columns: [table.cod_ibge, table.ano_exercicio] }),
+}));
+
+export const Extrato_Entregas = mysqlTable('Extrato_Entregas', {
+    id: serial('id').primaryKey(),
+    exercicio: int('exercicio').references(() => Populacao_Anual_Ente.ano_exercicio),
+    cod_ibge: int('cod_ibge').references(() => Populacao_Anual_Ente.cod_ibge),
+    instituicao: varchar('instituicao', { length: 255 }).references(() => Instituição.instituicao),
+    entregavel: varchar('entregavel', { length: 255 }),
+    periodo: int('periodo'),
+    periodicidade: char('periodicidade', { length: 1 }),
+    status_relatorio: char('status_relatorio', { length: 2 }),
+    data_status: datetime('data_status'),
+    forma_envio: char('forma_envio', { length: 1 }),
+    tipo_relatorio: char('tipo_relatorio', { length: 1 }),
+});
+
+export const Anexo = mysqlTable('Anexo', {
+    id_anexo: int('id_anexo').primaryKey().autoincrement(),
+    anexo: varchar('anexo', { length: 255 }),
+    demonstrativo: varchar('demonstrativo', { length: 255 }),
+    esfera: char('esfera', { length: 1 }),
+}, (table) => ({
+    anexoUniqueIdx: uniqueIndex('anexo_unique_idx').on(
+        table.anexo,
+        table.demonstrativo,
+        table.esfera
+    ),
+}));
+
+export const Rotulo = mysqlTable('Rotulo', {
+    rotulo: varchar('rotulo', { length: 255 }).primaryKey(),
+    id_anexo: int('id_anexo').notNull().references(() => Anexo.id_anexo),
+});
+
+export const Coluna = mysqlTable('Coluna', {
+    coluna: varchar('coluna', { length: 255 }).primaryKey(),
+    rotulo: varchar('rotulo', { length: 255 }).notNull().references(() => Rotulo.rotulo),
+});
+
+export const Conta = mysqlTable('Conta', {
+    cod_conta: varchar('cod_conta', { length: 255 }).primaryKey(),
+    conta: varchar('conta', { length: 255 }),
+    rotulo: varchar('rotulo', { length: 255 }).notNull().references(() => Rotulo.rotulo),
+});
+
+export const RREO_ou_RGF = mysqlTable('RREO_ou_RGF', {
+    id: serial('id').primaryKey().autoincrement(),
+    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    periodo: int('periodo'),
+    periodicidade: char('periodicidade', { length: 1 }),
+    instituicao: varchar('instituicao', { length: 255 }).notNull().references(() => Instituição.instituicao),
+    cod_ibge: int('cod_ibge').notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    coluna: varchar('coluna', { length: 255 }).notNull().references(() => Coluna.coluna),
+    cod_conta: varchar('cod_conta', { length: 255 }).notNull().references(() => Conta.cod_conta),
+    valor: double('valor'),
+});
+
+export const DCA = mysqlTable('DCA', {
+    id: serial('id').primaryKey(),
+    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    instituicao: varchar('instituicao', { length: 255 }).notNull().references(() => Instituição.instituicao),
+    cod_ibge: int('cod_ibge').notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    coluna: varchar('coluna', { length: 255 }).notNull().references(() => Coluna.coluna),
+    cod_conta: varchar('cod_conta', { length: 255 }).notNull().references(() => Conta.cod_conta),
+    valor: double('valor'),
+});
+
+export const MSC_Patrimonial = mysqlTable('MSC_Patrimonial', {
+    id: serial('id').primaryKey(),
+    tipo_matriz: char('tipo_matriz', { length: 4 }),
+    cod_ibge: varchar('cod_ibge', { length: 255 }).notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    conta_contabil: int('conta_contabil').notNull().references(() => Conta_Contabil.cod_conta_contabil),
+    poder_orgao: int('poder_orgao'),
+    financeiro_permanente: int('financeiro_permanente'),
+    fonte_recursos: varchar('fonte_recursos', { length: 255 }),
+    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    mes_referencia: int('mes_referencia'),
+    divida_consolidada: int('divida_consolidada'),
+    data_referencia: datetime('data_referencia'),
+    entrada_msc: int('entrada_msc'),
+    valor: double('valor'),
+    natureza_conta: char('natureza_conta', { length: 1 }),
+    tipo_valor: varchar('tipo_valor', { length: 255 }),
+});
+
+export const MSC_Orcamentaria = mysqlTable('MSC_Orcamentaria', {
+    id: serial('id').primaryKey(),
+    tipo_matriz: char('tipo_matriz', { length: 4 }),
+    cod_ibge: varchar('cod_ibge', { length: 255 }).notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    conta_contabil: int('conta_contabil').notNull().references(() => Conta_Contabil.cod_conta_contabil),
+    poder_orgao: int('poder_orgao'),
+    fonte_recursos: varchar('fonte_recursos', { length: 255 }),
+    funcao: char('funcao', { length: 2 }),
+    subfuncao: char('subfuncao', { length: 3 }),
+    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    mes_referencia: int('mes_referencia'),
+    educacao_saude: int('educacao_saude'),
+    data_referencia: datetime('data_referencia'),
+    entrada_msc: int('entrada_msc'),
+    natureza_despesa: char('natureza_despesa', { length: 8 }).notNull().references(() => Natureza_Despesa_Detalhada.co_natureza_despesa_deta),
+    ano_inscricao: int('ano_inscricao'),
+    natureza_receita: char('natureza_receita', { length: 8 }),
+    valor: double('valor'),
+    natureza_conta: char('natureza_conta', { length: 1 }),
+    tipo_valor: varchar('tipo_valor', { length: 255 }),
+});
+
+export const MSC_Controle = mysqlTable('MSC_Controle', {
+    id: serial('id').primaryKey(),
+    tipo_matriz: char('tipo_matriz', { length: 4 }),
+    cod_ibge: varchar('cod_ibge', { length: 255 }).notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    conta_contabil: int('conta_contabil').notNull().references(() => Conta_Contabil.cod_conta_contabil),
+    poder_orgao: int('poder_orgao'),
+    fonte_recursos: varchar('fonte_recursos', { length: 255 }),
+    funcao: char('funcao', { length: 2 }),
+    subfuncao: char('subfuncao', { length: 3 }),
+    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    mes_referencia: int('mes_referencia'),
+    educacao_saude: int('educacao_saude'),
+    data_referencia: datetime('data_referencia'),
+    entrada_msc: int('entrada_msc'),
+    natureza_despesa: char('natureza_despesa', { length: 8 }).notNull().references(() => Natureza_Despesa_Detalhada.co_natureza_despesa_deta),
+    ano_inscricao: int('ano_inscricao'),
+    valor: double('valor'),
+    natureza_conta: char('natureza_conta', { length: 1 }),
+    tipo_valor: varchar('tipo_valor', { length: 255 }),
+});
