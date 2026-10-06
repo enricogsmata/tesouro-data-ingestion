@@ -16,6 +16,9 @@ export interface PipelineExecutionOptions {
     layer: PipelineLayer;
     skipDiscovery?: boolean | undefined;
     startEndpointId?: number | undefined;
+    startOffset?: number | undefined;
+    maxOffset?: number | undefined;
+    singleEndpoint?: boolean | undefined;
 }
 
 /**
@@ -38,14 +41,16 @@ Opções de camada:
 
 Flags adicionais:
   --endpoint=<id>, -e <id>                  ID do endpoint inicial para o Fetch (ex: --endpoint=4)
+                                            Pode aceitar o offset inicial logo em seguida (ex: -e 17 100000)
   --skip-discovery                          Pula as etapas de discovery e mapeamento da Bronze
+  --max-offset=<num>                        Define o offset máximo no fetch da camada bronze (ex: --max-offset=100000)
+  --start-offset=<num>                      Define explicitamente o offset inicial do primeiro endpoint
+  --single-endpoint, -s                     Realiza o fetch apenas no endpoint específico informado
 
 Exemplos:
   npm run cli                               (Modo interativo com menus)
-  npx tsx src/run.cli.ts bronze             (Executa Bronze completo -> Silver)
-  npx tsx src/run.cli.ts bronze-fetch       (Pula discovery, inicia fetch do ID 1 -> Silver)
-  npx tsx src/run.cli.ts bronze-fetch -e 4  (Pula discovery, inicia fetch a partir do ID 4 -> Silver)
-  npx tsx src/run.cli.ts silver             (Executa apenas Silver)
+  npx tsx src/run.cli.ts bronze-fetch -e 17 100000 --max-offset=200000
+  npx tsx src/run.cli.ts bronze-fetch -e 4 --single-endpoint
 `);
 }
 
@@ -70,6 +75,9 @@ function parseOptionsFromArgs(): PipelineExecutionOptions | null {
     let layer: PipelineLayer | null = null;
     let skipDiscovery = false;
     let startEndpointId: number | undefined = undefined;
+    let startOffset: number | undefined = undefined;
+    let maxOffset: number | undefined = undefined;
+    let singleEndpoint: boolean | undefined = undefined;
 
     // Identifica flags de endpoint e skip-discovery
     for (let i = 0; i < args.length; i++) {
@@ -85,11 +93,36 @@ function parseOptionsFromArgs(): PipelineExecutionOptions | null {
             const nextArg = parseInt(args[i + 1]?.trim() || '', 10);
             if (!Number.isNaN(nextArg) && nextArg > 0) {
                 startEndpointId = nextArg;
+
+                const potentialOffset = parseInt(args[i + 2]?.trim() || '', 10);
+                if (!Number.isNaN(potentialOffset) && potentialOffset >= 0 && !(args[i + 2] || '').startsWith('-')) {
+                    startOffset = potentialOffset;
+                }
             }
         }
 
         if (arg === '--skip-discovery' || arg === '--skipdiscovery' || arg === '--no-discovery') {
             skipDiscovery = true;
+        }
+
+        if (arg === '--single-endpoint' || arg === '-s') {
+            singleEndpoint = true;
+        }
+
+        if (arg.startsWith('--max-offset=')) {
+            const val = parseInt(arg.split('=')[1]?.trim() || '', 10);
+            if (!Number.isNaN(val) && val >= 0) maxOffset = val;
+        } else if (arg === '--max-offset') {
+            const nextArg = parseInt(args[i + 1]?.trim() || '', 10);
+            if (!Number.isNaN(nextArg) && nextArg >= 0) maxOffset = nextArg;
+        }
+
+        if (arg.startsWith('--start-offset=')) {
+            const val = parseInt(arg.split('=')[1]?.trim() || '', 10);
+            if (!Number.isNaN(val) && val >= 0) startOffset = val;
+        } else if (arg === '--start-offset') {
+            const nextArg = parseInt(args[i + 1]?.trim() || '', 10);
+            if (!Number.isNaN(nextArg) && nextArg >= 0) startOffset = nextArg;
         }
     }
 
@@ -147,6 +180,9 @@ function parseOptionsFromArgs(): PipelineExecutionOptions | null {
             layer,
             skipDiscovery,
             startEndpointId,
+            startOffset,
+            maxOffset,
+            singleEndpoint
         };
     }
 
@@ -367,6 +403,9 @@ async function run_cli() {
         await bronzeOrchestrator({
             skipDiscovery: executionOptions.skipDiscovery,
             startEndpointId: executionOptions.startEndpointId,
+            startOffset: executionOptions.startOffset,
+            maxOffset: executionOptions.maxOffset,
+            singleEndpoint: executionOptions.singleEndpoint,
         });
 
         // ===============

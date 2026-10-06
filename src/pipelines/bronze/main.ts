@@ -17,6 +17,9 @@ const logger = createLogger(import.meta.url);
 export interface BronzeOrchestratorOptions {
     skipDiscovery?: boolean | undefined;
     startEndpointId?: number | undefined;
+    startOffset?: number | undefined;
+    maxOffset?: number | undefined;
+    singleEndpoint?: boolean | undefined;
 }
 
 export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
@@ -79,12 +82,19 @@ export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
 
     let Endpoints: Endpoint[];
 
-    if (startEndpointId && startEndpointId > 1) {
-        log.info(`> Filtrando endpoints a partir do ID ${startEndpointId}...`);
+    if (options?.singleEndpoint && options?.startEndpointId) {
+        log.info(`> Filtrando para executar APENAS o endpoint ID ${options.startEndpointId}...`);
         Endpoints = await db
             .select()
             .from(endpoints)
-            .where(gte(endpoints.id, startEndpointId))
+            .where(eq(endpoints.id, options.startEndpointId))
+            .orderBy(asc(endpoints.id));
+    } else if (options?.startEndpointId && options.startEndpointId > 1) {
+        log.info(`> Filtrando endpoints a partir do ID ${options.startEndpointId}...`);
+        Endpoints = await db
+            .select()
+            .from(endpoints)
+            .where(gte(endpoints.id, options.startEndpointId))
             .orderBy(asc(endpoints.id));
     } else {
         Endpoints = await db
@@ -94,13 +104,13 @@ export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
     }
 
     if (Endpoints.length === 0) {
-        log.warn(`[AVISO] Nenhum endpoint encontrado para extração (a partir do ID ${startEndpointId ?? 1}).`);
+        log.warn(`[AVISO] Nenhum endpoint encontrado para extração.`);
         return;
     }
 
     log.info(`> Total de endpoints a serem processados: ${Endpoints.length} (Iniciando em ID: ${Endpoints[0]!.id}, Path: "${Endpoints[0]!.path}")`);
 
-    await EndpointFetcherOrchestrator(DataSources, Endpoints, startEndpointId);
+    await EndpointFetcherOrchestrator(DataSources, Endpoints, options?.startEndpointId, options?.startOffset, options?.maxOffset, options?.singleEndpoint);
 }
 
 /**
