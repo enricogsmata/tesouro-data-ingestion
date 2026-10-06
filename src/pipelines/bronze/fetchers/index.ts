@@ -87,7 +87,6 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
         let paramKeys: string[] = [];
 
         if (requiredParams.length > 0) {
-            /* ... (Lógica de resolução de parâmetros mantida idêntica) ... */
             const resolvedParams: Record<string, any[]> = {};
             for (const reqParam of requiredParams) {
                 if (reqParam.name) {
@@ -169,7 +168,6 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
 
                 response.request.url = response.request.url ?? fullUrl;
 
-                // >>> ALTERAÇÃO CIRÚRGICA: Passando o objeto 'endpoint' completo ao invés de apenas o ID <<<
                 await PersistRawEndpointResponse(response, endpoint);
 
                 nextHref = ckeckIfHasNext(response);

@@ -19,14 +19,5 @@ export async function silverOrchestrator() {
     // 0. TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS EXTRAÍDOS
     // ==================================================
     log.info(`[INICIANDO TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS]`);
-    await pvlTransformerOrchestrator();
-    await cronogramaPagamentosOrchestrator();
-    await cronogramaLiberacoesOrchestrator();
-    await taxaCambioOrchestrator();
-    await resCronogramaPagamentosOrchestrator();
-    await cdpOrchestrator();
-    await tramitacaoDeferidoOrchestrator();
-    await depreciacaoTransformerOrchestrator();
-    await custoPensionistaTransformerOrchestrator();
-    
+    return;
 }

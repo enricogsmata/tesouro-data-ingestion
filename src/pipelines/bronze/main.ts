@@ -1,4 +1,4 @@
-import { asc, eq, gte } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 import { db } from "../../database/dbConnection.js";
 import { dataSources, endpointParameters, endpoints } from "../../database/schema.js";
 import type { DataSource, Endpoint, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from "../../database/types.js";
@@ -188,7 +188,6 @@ async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistE
 async function persistEndpointParams(mappedEndpointParams: any[], endpoint: NewEndpoint, persistedEndpoint: PersistEndpointResponse) {
     const newEndpointParams: NewEndpointParameter[] = mappedEndpointParams.map((param) => {
         const paramName = param.name ? param.name : '';
-
         const isMalformedData: number = endpoint.path.includes('resultado-fiscal') && paramName.includes("tema") ? 1 : 0;
 
         return {
@@ -202,18 +201,17 @@ async function persistEndpointParams(mappedEndpointParams: any[], endpoint: NewE
     });
 
     if (newEndpointParams.length > 0) {
-        if (persistedEndpoint.alreadyExists) {
-            for (const endpointParam of newEndpointParams) {
-                const existingEndpointParams = await db.select().from(endpointParameters).where(eq(endpointParameters.name, endpointParam.name));
-
-                // Somente inserimos parâmetros não persistidos
-                if (existingEndpointParams.length > 0)
-                    newEndpointParams.filter(newEndpointParam => newEndpointParam != endpointParam);
-            }
-        }
 
         for (const newEndpointParam of newEndpointParams) {
-            const [alreadyExists] = await db.select().from(endpointParameters).where(eq(endpointParameters.name, newEndpointParam.name));
+            const [alreadyExists] = await db
+                .select()
+                .from(endpointParameters)
+                .where(
+                    and(
+                        eq(endpointParameters.name, newEndpointParam.name),
+                        eq(endpointParameters.endpointId, newEndpointParam.endpointId)
+                    )
+                );
 
             if (!alreadyExists) {
                 await db.insert(endpointParameters).values(newEndpointParam);
