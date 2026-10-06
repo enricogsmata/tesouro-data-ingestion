@@ -556,7 +556,7 @@ export const Ente = mysqlTable('Ente', {
 
 export const PVL = mysqlTable('PVL', {
     id_pleito: int('id_pleito').primaryKey(),
-    cod_ibge: varchar('cod_ibge', { length: 255 }).references(() => Ente.cod_ibge),
+    cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge), // Corrigido para INT
     num_pvl: varchar('num_pvl', { length: 255 }).unique(),
     status: varchar('status', { length: 255 }),
     num_processo: varchar('num_processo', { length: 255 }).unique(),
@@ -866,10 +866,12 @@ export const Demais_Custos = mysqlTable('Demais_Custos', {
 
 export const Instituição = mysqlTable('Instituição', {
     id: serial('id').primaryKey(),
-    instituicao: varchar('instituicao', { length: 255 }),
+    instituicao: varchar('instituicao', { length: 255 }).notNull(),
     co_poder: char('co_poder', { length: 1 }),
     cod_ibge: int('cod_ibge').notNull().references(() => Ente.cod_ibge),
-});
+}, (table) => ({
+    instUniqueIdx: uniqueIndex('inst_nome_idx').on(table.instituicao), // Adicionado UNIQUE para permitir FK por nome
+}));
 
 export const Populacao_Anual_Ente = mysqlTable('Populacao_Anual_Ente', {
     cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge),
@@ -881,8 +883,8 @@ export const Populacao_Anual_Ente = mysqlTable('Populacao_Anual_Ente', {
 
 export const Extrato_Entregas = mysqlTable('Extrato_Entregas', {
     id: serial('id').primaryKey(),
-    exercicio: int('exercicio').references(() => Populacao_Anual_Ente.ano_exercicio),
-    cod_ibge: int('cod_ibge').references(() => Populacao_Anual_Ente.cod_ibge),
+    exercicio: int('exercicio'),
+    cod_ibge: int('cod_ibge'),
     instituicao: varchar('instituicao', { length: 255 }).references(() => Instituição.instituicao),
     entregavel: varchar('entregavel', { length: 255 }),
     periodo: int('periodo'),
@@ -891,7 +893,12 @@ export const Extrato_Entregas = mysqlTable('Extrato_Entregas', {
     data_status: datetime('data_status'),
     forma_envio: char('forma_envio', { length: 1 }),
     tipo_relatorio: char('tipo_relatorio', { length: 1 }),
-});
+}, (table) => ({
+    popFk: foreignKey({
+        columns: [table.cod_ibge, table.exercicio],
+        foreignColumns: [Populacao_Anual_Ente.cod_ibge, Populacao_Anual_Ente.ano_exercicio],
+    }),
+}));
 
 export const Anexo = mysqlTable('Anexo', {
     id_anexo: int('id_anexo').primaryKey().autoincrement(),
@@ -923,16 +930,21 @@ export const Conta = mysqlTable('Conta', {
 });
 
 export const RREO_ou_RGF = mysqlTable('RREO_ou_RGF', {
-    id: serial('id').primaryKey().autoincrement(),
-    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    id: serial('id').primaryKey(), // Removido .autoincrement() redundante
+    exercicio: int('exercicio').notNull(),
     periodo: int('periodo'),
     periodicidade: char('periodicidade', { length: 1 }),
     instituicao: varchar('instituicao', { length: 255 }).notNull().references(() => Instituição.instituicao),
-    cod_ibge: int('cod_ibge').notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    cod_ibge: int('cod_ibge').notNull(),
     coluna: varchar('coluna', { length: 255 }).notNull().references(() => Coluna.coluna),
     cod_conta: varchar('cod_conta', { length: 255 }).notNull().references(() => Conta.cod_conta),
     valor: double('valor'),
-});
+}, (table) => ({
+    popFk: foreignKey({
+        columns: [table.cod_ibge, table.exercicio],
+        foreignColumns: [Populacao_Anual_Ente.cod_ibge, Populacao_Anual_Ente.ano_exercicio],
+    }),
+}));
 
 export const DCA = mysqlTable('DCA', {
     id: serial('id').primaryKey(),
@@ -947,12 +959,12 @@ export const DCA = mysqlTable('DCA', {
 export const MSC_Patrimonial = mysqlTable('MSC_Patrimonial', {
     id: serial('id').primaryKey(),
     tipo_matriz: char('tipo_matriz', { length: 4 }),
-    cod_ibge: varchar('cod_ibge', { length: 255 }).notNull().references(() => Populacao_Anual_Ente.cod_ibge),
+    cod_ibge: int('cod_ibge').notNull(), // Corrigido para INT
     conta_contabil: int('conta_contabil').notNull().references(() => Conta_Contabil.cod_conta_contabil),
     poder_orgao: int('poder_orgao'),
     financeiro_permanente: int('financeiro_permanente'),
     fonte_recursos: varchar('fonte_recursos', { length: 255 }),
-    exercicio: int('exercicio').notNull().references(() => Populacao_Anual_Ente.ano_exercicio),
+    exercicio: int('exercicio').notNull(),
     mes_referencia: int('mes_referencia'),
     divida_consolidada: int('divida_consolidada'),
     data_referencia: datetime('data_referencia'),
@@ -960,7 +972,12 @@ export const MSC_Patrimonial = mysqlTable('MSC_Patrimonial', {
     valor: double('valor'),
     natureza_conta: char('natureza_conta', { length: 1 }),
     tipo_valor: varchar('tipo_valor', { length: 255 }),
-});
+}, (table) => ({
+    popFk: foreignKey({
+        columns: [table.cod_ibge, table.exercicio],
+        foreignColumns: [Populacao_Anual_Ente.cod_ibge, Populacao_Anual_Ente.ano_exercicio],
+    }),
+}));
 
 export const MSC_Orcamentaria = mysqlTable('MSC_Orcamentaria', {
     id: serial('id').primaryKey(),
