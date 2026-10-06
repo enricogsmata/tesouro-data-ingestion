@@ -18,13 +18,13 @@ export async function instituicaoTransformerOrchestrator(raw: RawRreo) {
     }
 }
 
-function transform(item: RawRreo): NewInstituicao | null {
+function transform(item: any): NewInstituicao | null {
     const log = logger.forMethod('transform');
     try {
         if (!item.instituicao || !item.cod_ibge) return null;
         return {
             instituicao: item.instituicao,
-            co_poder: null,
+            co_poder: item.co_poder ?? null,
             cod_ibge: item.cod_ibge,
         };
     } catch (error: any) {

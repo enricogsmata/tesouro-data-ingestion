@@ -1,0 +1,112 @@
+import { db } from "../../../database/dbConnection.js";
+import { RREO_ou_RGF, rawDs4SiconfiTtRgf } from "../../../database/schema.js";
+import { createLogger } from "../../../services/logs.js";
+import { BATCH_SIZE } from "../utils.js";
+import { instituicaoTransformerOrchestrator } from "./instituicao.transformer.js";
+import { populacaoAnualEnteTransformerOrchestrator } from "./populacao_anual_ente.transformer.js";
+import { anexoTransformerOrchestrator } from "./anexo.transformer.js";
+import { rotuloTransformerOrchestrator } from "./rotulo.transformer.js";
+import { colunaTransformerOrchestrator } from "./coluna.transformer.js";
+import { contaTransformerOrchestrator } from "./conta.transformer.js";
+
+type RawRgf = typeof rawDs4SiconfiTtRgf.$inferSelect;
+type NewRgf = typeof RREO_ou_RGF.$inferInsert;
+const logger = createLogger(import.meta.url);
+
+export async function rgfTransformerOrchestrator() {
+    const log = logger.forMethod('rgfTransformerOrchestrator');
+
+    try {
+        for (let index = 0; ; index++) {
+            const raw: RawRgf[] = await load(index);
+            if (raw.length === 0) return;
+
+            const transformed: NewRgf[] | null = await transform(raw);
+
+            if (transformed && transformed.length > 0)
+                await save(transformed); 
+            else
+                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+        }
+    } catch (error: any) {
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
+    }
+}
+
+async function load(index: number): Promise<RawRgf[]> {
+    const log = logger.forMethod('load');
+
+    try {
+        const nextOffset = index * BATCH_SIZE;
+        const response = await db.select().from(rawDs4SiconfiTtRgf).offset(nextOffset).limit(BATCH_SIZE) as RawRgf[];
+        return response;
+    } catch (error: any) {
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
+        return [];
+    }
+}
+
+async function transform(rawItems: RawRgf[]): Promise<NewRgf[] | null> {
+    const log = logger.forMethod('transform');
+
+    try {
+        let transformed: NewRgf[] = [];
+        for (const raw of rawItems) {
+            raw.rotulo = raw.rotulo ?? "Principal";
+
+            await instituicaoTransformerOrchestrator(raw as any);
+            await populacaoAnualEnteTransformerOrchestrator(raw as any);
+            
+            const idAnexo = await anexoTransformerOrchestrator({
+                ...raw,
+                demonstrativo: null,
+                esfera: null
+            } as any);
+            
+            if (idAnexo) {
+                await rotuloTransformerOrchestrator(raw as any, idAnexo);
+                await colunaTransformerOrchestrator(raw as any);
+                await contaTransformerOrchestrator(raw as any);
+            }
+
+            if (
+                raw.exercicio !== null &&
+                raw.instituicao !== null &&
+                raw.cod_ibge !== null &&
+                raw.coluna !== null &&
+                raw.cod_conta !== null
+            ) {
+                const newRgf: NewRgf = {
+                    exercicio: raw.exercicio,
+                    periodo: raw.periodo ?? null,
+                    periodicidade: raw.periodicidade ?? null,
+                    instituicao: raw.instituicao,
+                    cod_ibge: raw.cod_ibge,
+                    coluna: raw.coluna,
+                    cod_conta: raw.cod_conta,
+                    valor: raw.valor ?? null,
+                };
+                
+                transformed.push(newRgf);
+            }
+        }
+
+        return transformed;
+    } catch (error: any) {
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar objeto.`);
+        return null;
+    }
+}
+
+async function save(transformed: NewRgf[]) {
+    const log = logger.forMethod('save');
+
+    try {
+        await db
+            .insert(RREO_ou_RGF)
+            .ignore()
+            .values(transformed);
+    } catch (error: any) {
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+    }
+}
