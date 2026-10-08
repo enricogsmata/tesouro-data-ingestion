@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Populacao_Anual_Ente, rawDs4SiconfiTtRreo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtRreo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Populacao_Anual_Ente } from "../../../database/silver_schema.js";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewPopulacao = typeof Populacao_Anual_Ente.$inferInsert;
@@ -36,7 +37,7 @@ function transform(item: RawRreo): NewPopulacao | null {
 async function save(transformed: NewPopulacao) {
     const log = logger.forMethod('save');
     try {
-        await db.insert(Populacao_Anual_Ente).ignore().values(transformed);
+        await silverDB.insert(Populacao_Anual_Ente).ignore().values(transformed);
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
     }

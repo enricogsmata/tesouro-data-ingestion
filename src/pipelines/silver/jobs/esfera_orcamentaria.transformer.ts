@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Esfera_Orcamentaria, rawDs2CustosTtTransferencias } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtTransferencias } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Esfera_Orcamentaria } from "../../../database/silver_schema.js";
 
 type RawTransferencia = typeof rawDs2CustosTtTransferencias.$inferSelect;
 type NewEsferaOrcamentaria = typeof Esfera_Orcamentaria.$inferInsert;
@@ -38,7 +39,7 @@ function transform(item: RawTransferencia): NewEsferaOrcamentaria | null {
 async function save(transformed: NewEsferaOrcamentaria) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Esfera_Orcamentaria)
             .ignore()
             .values(transformed);

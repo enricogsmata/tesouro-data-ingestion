@@ -1,6 +1,6 @@
 import { and, asc, eq, gte } from "drizzle-orm";
-import { db } from "../../database/dbConnection.js";
-import { dataSources, endpointParameters, endpoints } from "../../database/schema.js";
+import { bronzeDB } from "../../database/dbConnection.js";
+import { dataSources, endpointParameters, endpoints } from "../../database/bronze_schema.js";
 import type { DataSource, Endpoint, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from "../../database/types.js";
 import { createLogger } from "../../services/logs.js";
 import { BuildDataSources } from "./discovery/discovery.js";
@@ -56,7 +56,7 @@ export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
         // ---------------------------------
         // Fluxo de mapeamento dos endpoints
         // ---------------------------------
-        DataSources = await db.select().from(dataSources) as DataSource[];
+        DataSources = await bronzeDB.select().from(dataSources) as DataSource[];
         const MappedendpointsWithParamsList: MappedEndpointWithParams[] = MapDiscoveredEndpointsInMemory(DataSources);
 
         if (!MappedendpointsWithParamsList) {
@@ -67,7 +67,7 @@ export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
         await persistMappedendpoints(MappedendpointsWithParamsList);
     } else {
         log.info(`> Etapa de Discovery ignorada (skipDiscovery = true).`);
-        DataSources = await db.select().from(dataSources) as DataSource[];
+        DataSources = await bronzeDB.select().from(dataSources) as DataSource[];
 
         if (!DataSources || DataSources.length === 0) {
             log.fatal("[ERRO] Nenhuma fonte de dados (dataSources) encontrada no banco de dados para realizar o fetch!");
@@ -84,20 +84,20 @@ export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
 
     if (options?.singleEndpoint && options?.startEndpointId) {
         log.info(`> Filtrando para executar APENAS o endpoint ID ${options.startEndpointId}...`);
-        Endpoints = await db
+        Endpoints = await bronzeDB
             .select()
             .from(endpoints)
             .where(eq(endpoints.id, options.startEndpointId))
             .orderBy(asc(endpoints.id));
     } else if (options?.startEndpointId && options.startEndpointId > 1) {
         log.info(`> Filtrando endpoints a partir do ID ${options.startEndpointId}...`);
-        Endpoints = await db
+        Endpoints = await bronzeDB
             .select()
             .from(endpoints)
             .where(gte(endpoints.id, options.startEndpointId))
             .orderBy(asc(endpoints.id));
     } else {
-        Endpoints = await db
+        Endpoints = await bronzeDB
             .select()
             .from(endpoints)
             .orderBy(asc(endpoints.id));
@@ -122,12 +122,12 @@ async function persistDiscoveredDatasources(Datasources: NewDataSource[]) {
 
     try {
         for (const dataSource of Datasources) {
-            const [existingDatasource] = await db.select().from(dataSources).where(eq(dataSources.baseUrl, dataSource.baseUrl));
+            const [existingDatasource] = await bronzeDB.select().from(dataSources).where(eq(dataSources.baseUrl, dataSource.baseUrl));
 
             // Conjuntos de dados já persistidos são ignorados para evitar dados duplicados no banco
             if (existingDatasource) continue;
 
-            await db.insert(dataSources).values(dataSource);
+            await bronzeDB.insert(dataSources).values(dataSource);
         }
     } catch (error) {
         log.fatal({ data: `[INSERT INTO dataSources] | dataSources Count: ${Datasources.length}` }, `[FATAL] Falha ao armazenar fontes de dados no banco relacional: ${error}`);
@@ -166,7 +166,7 @@ async function persistMappedendpoints(MappedendpointsWithParams: MappedEndpointW
  */
 async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistEndpointResponse | null> {
     const log = logger.forMethod("persistNewEndpoint");
-    const [existingEndpoint] = await db.select().from(endpoints).where(eq(endpoints.path, mappedEndpoint.path));
+    const [existingEndpoint] = await bronzeDB.select().from(endpoints).where(eq(endpoints.path, mappedEndpoint.path));
 
     // endpoints já existentes no banco de dados não são inseridos para evitar dados duplicados
     if (existingEndpoint) {
@@ -176,7 +176,7 @@ async function persistNewEndpoint(mappedEndpoint: NewEndpoint): Promise<PersistE
         }
     }
 
-    const [persistedEndpointId] = await db.insert(endpoints).values(mappedEndpoint).$returningId();
+    const [persistedEndpointId] = await bronzeDB.insert(endpoints).values(mappedEndpoint).$returningId();
 
     if (!persistedEndpointId) {
         log.error(`[ERRO] Falha ao inserir os parâmetros do endpoint mapeado.`);
@@ -213,7 +213,7 @@ async function persistEndpointParams(mappedEndpointParams: any[], endpoint: NewE
     if (newEndpointParams.length > 0) {
 
         for (const newEndpointParam of newEndpointParams) {
-            const [alreadyExists] = await db
+            const [alreadyExists] = await bronzeDB
                 .select()
                 .from(endpointParameters)
                 .where(
@@ -224,7 +224,7 @@ async function persistEndpointParams(mappedEndpointParams: any[], endpoint: NewE
                 );
 
             if (!alreadyExists) {
-                await db.insert(endpointParameters).values(newEndpointParam);
+                await bronzeDB.insert(endpointParameters).values(newEndpointParam);
             }
         }
     }

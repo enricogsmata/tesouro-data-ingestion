@@ -1,11 +1,12 @@
-import { db } from "../../../database/dbConnection.js";
-import { Transferencia, rawDs2CustosTtTransferencias } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtTransferencias } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { organizacaoTransformerOrchestrator } from "./organizacao.transformer.js";
 import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
 import { esferaOrcamentariaTransformerOrchestrator } from "./esfera_orcamentaria.transformer.js";
 import { resultadoPrimarioTransformerOrchestrator } from "./resultado_primario.transformer.js";
+import { Transferencia } from "../../../database/silver_schema.js";
 
 type RawTransferencia = typeof rawDs2CustosTtTransferencias.$inferSelect;
 type NewTransferencia = typeof Transferencia.$inferInsert;
@@ -36,7 +37,7 @@ async function load(index: number): Promise<RawTransferencia[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs2CustosTtTransferencias).offset(nextOffset).limit(BATCH_SIZE) as RawTransferencia[];
+        const response = await bronzeDB.select().from(rawDs2CustosTtTransferencias).offset(nextOffset).limit(BATCH_SIZE) as RawTransferencia[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -91,7 +92,7 @@ async function save(transformed: NewTransferencia[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Transferencia)
             .ignore()
             .values(transformed)

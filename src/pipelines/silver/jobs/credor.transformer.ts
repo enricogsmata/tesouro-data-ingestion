@@ -1,6 +1,7 @@
-import { sql } from "drizzle-orm";
-import { db } from "../../../database/dbConnection.js";
-import { Credor } from "../../../database/schema.js";
+
+import { eq } from "drizzle-orm";
+import { silverDB } from "../../../database/dbConnection.js";
+import { Credor } from "../../../database/silver_schema.js";
 import { createLogger } from "../../../services/logs.js";
 
 type NewCredor = typeof Credor.$inferInsert;
@@ -23,10 +24,21 @@ export async function credorTransformerOrchestrator(raw: any): Promise<number | 
 }
 
 async function save(rawCredor: NewCredor): Promise<number | null> {
-    const [inserted] = await db
-    .insert(Credor)
-    .ignore()
-    .values(rawCredor)
-    .$returningId();
-    return inserted?.id_credor ?? null;
+    // Tenta inserir
+    const [inserted] = await silverDB
+        .insert(Credor)
+        .ignore()
+        .values(rawCredor)
+        .$returningId();
+
+    if (inserted?.id_credor) {
+        return inserted.id_credor;
+    }
+
+    const [existing] = await silverDB
+        .select({ id_credor: Credor.id_credor })
+        .from(Credor)
+        .where(eq(Credor.credor, rawCredor.credor!));
+
+    return existing?.id_credor ?? null;
 }

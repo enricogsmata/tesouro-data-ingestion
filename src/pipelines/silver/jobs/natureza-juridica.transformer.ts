@@ -1,8 +1,7 @@
-import { formToJSON } from "axios";
-import { Natureza_Juridica } from "../../../database/schema.js";
 import { createLogger } from "../../../services/logs.js";
 import type { RawDepreciacao } from "./depreciacao.transformer.js";
-import { db } from "../../../database/dbConnection.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { Natureza_Juridica } from "../../../database/silver_schema.js";
 
 type RawNaturezaJuridica = typeof Natureza_Juridica.$inferInsert;
 
@@ -42,7 +41,7 @@ function transform(item: RawDepreciacao): RawNaturezaJuridica | null {
 async function save(transformed: RawNaturezaJuridica) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Natureza_Juridica)
             .ignore()
             .values(transformed);

@@ -1,7 +1,8 @@
-import { db } from "../../../database/dbConnection.js";
-import { Operacoes_Nao_Contratadas, rawDs1PvlTramitacaoDeferido } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1PvlTramitacaoDeferido } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
+import { Operacoes_Nao_Contratadas } from "../../../database/silver_schema.js";
 
 type RawDeferido = typeof rawDs1PvlTramitacaoDeferido.$inferSelect;
 type NewDeferido = typeof Operacoes_Nao_Contratadas.$inferInsert;
@@ -29,7 +30,7 @@ async function load(index: number): Promise<RawDeferido[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawDeferido[] = await db
+        const raw: RawDeferido[] = await bronzeDB
             .select()
             .from(rawDs1PvlTramitacaoDeferido)
             .offset(index * 1000)
@@ -48,12 +49,14 @@ async function transform(raw: RawDeferido[]): Promise<NewDeferido[]> {
     try {
         let transformed: NewDeferido[] = [];
         for (const item of raw) {
-            const newDeferido: NewDeferido = {
-                id_pleito: item.id_pleito,
-                id_pleito_nao_contratado: item.pleito_nao_contratado,
-            }
+            if (item.id_pleito && item.pleito_nao_contratado) {
+                const newDeferido: NewDeferido = {
+                    id_pleito: item.id_pleito,
+                    id_pleito_nao_contratado: item.pleito_nao_contratado,
+                }
 
-            transformed.push(newDeferido);
+                transformed.push(newDeferido);
+            }
         }
 
         return transformed;
@@ -67,7 +70,7 @@ async function save(transformed: NewDeferido[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Operacoes_Nao_Contratadas)
             .ignore()
             .values(transformed);

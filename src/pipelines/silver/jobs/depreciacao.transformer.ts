@@ -1,10 +1,11 @@
-import { db } from "../../../database/dbConnection.js";
-import { Custo_Depreciacao, rawDs2CustosTtDepreciacao } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtDepreciacao } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { contaContabilTransformerOrchestrator } from "./conta-contabil.transformer.js";
 import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
 import { organizacaoTransformerOrchestrator, type Organizacoes } from "./organizacao.transformer.js";
+import { Custo_Depreciacao } from "../../../database/silver_schema.js";
 
 export type RawDepreciacao = typeof rawDs2CustosTtDepreciacao.$inferSelect;
 type NewCustoDepreciacao = typeof Custo_Depreciacao.$inferInsert;
@@ -32,7 +33,7 @@ async function load(index: number): Promise<RawDepreciacao[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawDepreciacao[] = await db
+        const raw: RawDepreciacao[] = await bronzeDB
             .select()
             .from(rawDs2CustosTtDepreciacao)
             .offset(index * 1000)
@@ -84,7 +85,7 @@ async function transform(raw: RawDepreciacao[]): Promise<NewCustoDepreciacao[]> 
 async function save(transformed: NewCustoDepreciacao[]) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Custo_Depreciacao)
             .values(transformed);
     } catch (error: any) {

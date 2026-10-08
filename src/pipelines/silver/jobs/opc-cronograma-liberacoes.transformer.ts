@@ -1,7 +1,8 @@
-import { db } from "../../../database/dbConnection.js";
-import { Cronograma_Liberacoes, rawDs1OpcCronogramaLiberacoes } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1OpcCronogramaLiberacoes } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
+import { Cronograma_Liberacoes } from "../../../database/silver_schema.js";
 
 type RawCronogramaLiberacoes = typeof rawDs1OpcCronogramaLiberacoes.$inferSelect;
 type NewCronogramaLiberacoes = typeof Cronograma_Liberacoes.$inferInsert;
@@ -32,7 +33,7 @@ async function load(index: number): Promise<RawCronogramaLiberacoes[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawCronogramaLiberacoes[] = await db
+        const raw: RawCronogramaLiberacoes[] = await bronzeDB
             .select()
             .from(rawDs1OpcCronogramaLiberacoes)
             .offset(index * 1000)
@@ -76,7 +77,7 @@ async function save(transformed: NewCronogramaLiberacoes[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Cronograma_Liberacoes)
             .ignore()
             .values(transformed);

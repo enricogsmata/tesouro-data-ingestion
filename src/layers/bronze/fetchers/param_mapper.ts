@@ -45,9 +45,8 @@ export const parameterResolver: ParameterResolverMap = {
     },
 
     "id_ente": async () => {
-        // Selecionamos todos os campos do endpoint para ter acesso ao dataSourceId e path
         const [entesEndpoint] = await bronzeDB
-            .select()
+            .select({ id: endpoints.id })
             .from(endpoints)
             .where(eq(endpoints.path, "entes"));
 
@@ -58,63 +57,23 @@ export const parameterResolver: ParameterResolverMap = {
             .from(rawEndpointResponse)
             .where(eq(rawEndpointResponse.endpointId, entesEndpoint.id));
 
+        if (!rawResponses || rawResponses.length === 0) return [];
+
         const entesCodIbgeList = new Set<number>();
 
-        // Se a lista de entes estiver vazia no banco, faz a requisição diretamente
-        if (!rawResponses || rawResponses.length === 0) {
-            // Import dinâmico do schema e de dados necessários (caso não estejam importados no topo)
-            const { dataSources } = await import("../../../database/bronze_schema.js");
-            const axios = (await import("axios")).default;
+        // 3. Itera sobre cada resposta salva no banco
+        for (const row of rawResponses) {
+            if (!row.rawItems) continue;
 
-            const [dataSource] = await bronzeDB
-                .select({ baseUrl: dataSources.baseUrl })
-                .from(dataSources)
-                .where(eq(dataSources.id, entesEndpoint.dataSourceId));
+            const parsedItems = typeof row.rawItems === 'string'
+                ? JSON.parse(row.rawItems)
+                : row.rawItems;
 
-            if (dataSource && dataSource.baseUrl) {
-                const fullUrl = new URL(entesEndpoint.path, dataSource.baseUrl).toString();
-
-                try {
-                    const response = await axios.get(fullUrl);
-                    const items = response.data?.registros ?? response.data?.items ?? [];
-
-                    // Restringir dados duplicados idênticos
-                    // Utilizando um Map com o cod_ibge como chave para assegurar dados estritamente únicos
-                    const uniqueItemsMap = new Map();
-                    for (const item of items) {
-                        if (item?.cod_ibge) {
-                            // Se precisar comparar o objeto inteiro, pode usar stringify, mas 
-                            // a chave primária (cod_ibge) é a forma mais segura de evitar duplicidade real
-                            if (!uniqueItemsMap.has(item.cod_ibge)) {
-                                uniqueItemsMap.set(item.cod_ibge, item);
-                            }
-                        }
-                    }
-
-                    // Extrai apenas os códigos IBGE únicos para a lista final
-                    for (const item of uniqueItemsMap.values()) {
+            // Garantimos que é uma lista antes de iterar
+            if (Array.isArray(parsedItems)) {
+                for (const item of parsedItems) {
+                    if (item?.cod_ibge) {
                         entesCodIbgeList.add(item.cod_ibge);
-                    }
-
-                } catch (error) {
-                    console.error("[ERRO] Falha ao realizar requisição de fallback no endpoint de entes:", error);
-                }
-            }
-        } else {
-            // Itera sobre cada resposta salva no banco
-            for (const row of rawResponses) {
-                if (!row.rawItems) continue;
-
-                const parsedItems = typeof row.rawItems === 'string'
-                    ? JSON.parse(row.rawItems)
-                    : row.rawItems;
-
-                // Garantimos que é uma lista antes de iterar
-                if (Array.isArray(parsedItems)) {
-                    for (const item of parsedItems) {
-                        if (item?.cod_ibge) {
-                            entesCodIbgeList.add(item.cod_ibge);
-                        }
                     }
                 }
             }

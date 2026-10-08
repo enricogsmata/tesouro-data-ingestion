@@ -1,7 +1,8 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../../../database/dbConnection.js";
-import { Anexo, rawDs4SiconfiTtRreo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtRreo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Anexo } from "../../../database/silver_schema.js";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewAnexo = typeof Anexo.$inferInsert;
@@ -30,7 +31,7 @@ export async function anexoTransformerOrchestrator(raw: any): Promise<number | n
             conditions.push(isNull(Anexo.esfera));
         }
 
-        const result = await db.select({ id: Anexo.id_anexo })
+        const result = await bronzeDB.select({ id: Anexo.id_anexo })
             .from(Anexo)
             .where(and(...conditions as any))
             .limit(1);
@@ -60,7 +61,7 @@ function transform(item: any): NewAnexo | null {
 async function save(transformed: NewAnexo) {
     const log = logger.forMethod('save');
     try {
-        await db.insert(Anexo).ignore().values(transformed);
+        await silverDB.insert(Anexo).ignore().values(transformed);
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
     }

@@ -1,5 +1,4 @@
-import { db } from "../../../database/dbConnection.js";
-import { Custo_Ativo, rawDs2CustosTtPessoalAtivo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { organizacaoTransformerOrchestrator } from "./organizacao.transformer.js";
@@ -8,6 +7,8 @@ import { areaAtuacaoTransformerOrchestrator } from "./area_atuacao.transformer.j
 import { escolaridadeTransformerOrchestrator } from "./escolaridade.transformer.js";
 import { faixaEtariaTransformerOrchestrator } from "./faixa_etaria.transformer.js";
 import { sexoTransformerOrchestrator } from "./sexo.transformer.js";
+import { Custo_Ativo } from "../../../database/silver_schema.js";
+import { rawDs2CustosTtPessoalAtivo } from "../../../database/bronze_schema.js";
 
 type RawCustoAtivo = typeof rawDs2CustosTtPessoalAtivo.$inferSelect;
 type NewCustoAtivo = typeof Custo_Ativo.$inferInsert;
@@ -38,7 +39,7 @@ async function load(index: number): Promise<RawCustoAtivo[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs2CustosTtPessoalAtivo).offset(nextOffset).limit(BATCH_SIZE) as RawCustoAtivo[];
+        const response = await bronzeDB.select().from(rawDs2CustosTtPessoalAtivo).offset(nextOffset).limit(BATCH_SIZE) as RawCustoAtivo[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -107,7 +108,7 @@ async function save(transformed: NewCustoAtivo[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Custo_Ativo)
             .ignore()
             .values(transformed)

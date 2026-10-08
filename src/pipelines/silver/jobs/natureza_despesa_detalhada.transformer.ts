@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Natureza_Despesa_Detalhada, rawDs2CustosTtDemais } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtDemais } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Natureza_Despesa_Detalhada } from "../../../database/silver_schema.js";
 
 type RawDemaisCustos = typeof rawDs2CustosTtDemais.$inferSelect;
 type NewNaturezaDespesaDetalhada = typeof Natureza_Despesa_Detalhada.$inferInsert;
@@ -30,7 +31,7 @@ function transform(item: RawDemaisCustos): NewNaturezaDespesaDetalhada | null {
             no_natureza_despesa_deta: item.no_natureza_despesa_deta,
             id_categoria_economica_nade: item.id_categoria_economica_nade,
             id_grupo_despesa_nade: item.id_grupo_despesa_nade,
-            id_moap_nade: item.id_moap_nade,
+            id_moap_nade: Number(item.id_moap_nade),
             id_elemento_despesa_nade: item.id_elemento_despesa_nade,
             id_subitem_nade: item.id_subitem_nade,
         };
@@ -43,7 +44,7 @@ function transform(item: RawDemaisCustos): NewNaturezaDespesaDetalhada | null {
 async function save(transformed: NewNaturezaDespesaDetalhada) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Natureza_Despesa_Detalhada)
             .ignore()
             .values(transformed);

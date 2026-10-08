@@ -1,7 +1,8 @@
-import { db } from "../../../database/dbConnection.js";
-import { rawDs1ResCronogramaPagamentos, Resumo_Cronograma_Pagamentos } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1ResCronogramaPagamentos } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
+import { Resumo_Cronograma_Pagamentos } from "../../../database/silver_schema.js";
 
 type RawResCronogramaPagamentos = typeof rawDs1ResCronogramaPagamentos.$inferSelect;
 type NewResCronogramaPagamentos = typeof Resumo_Cronograma_Pagamentos.$inferInsert;
@@ -33,7 +34,7 @@ async function load(index: number): Promise<RawResCronogramaPagamentos[]> {
     const log = logger.forMethod(`load`);
 
     try {
-        const raw: RawResCronogramaPagamentos[] = await db
+        const raw: RawResCronogramaPagamentos[] = await bronzeDB
             .select()
             .from(rawDs1ResCronogramaPagamentos)
             .offset(index * 1000)
@@ -78,7 +79,7 @@ async function save(transformed: NewResCronogramaPagamentos[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Resumo_Cronograma_Pagamentos)
             .ignore()
             .values(transformed);

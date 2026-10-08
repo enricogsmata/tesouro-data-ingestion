@@ -1,5 +1,5 @@
-import { db } from "../../../database/dbConnection.js";
-import { RREO_ou_RGF, rawDs4SiconfiTtRreo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtRreo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { instituicaoTransformerOrchestrator } from "./instituicao.transformer.js";
@@ -8,6 +8,7 @@ import { anexoTransformerOrchestrator } from "./anexo.transformer.js";
 import { rotuloTransformerOrchestrator } from "./rotulo.transformer.js";
 import { colunaTransformerOrchestrator } from "./coluna.transformer.js";
 import { contaTransformerOrchestrator } from "./conta.transformer.js";
+import { RREO_ou_RGF } from "../../../database/silver_schema.js";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewRreo = typeof RREO_ou_RGF.$inferInsert;
@@ -38,7 +39,7 @@ async function load(index: number): Promise<RawRreo[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs4SiconfiTtRreo).offset(nextOffset).limit(BATCH_SIZE) as RawRreo[];
+        const response = await bronzeDB.select().from(rawDs4SiconfiTtRreo).offset(nextOffset).limit(BATCH_SIZE) as RawRreo[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -98,7 +99,7 @@ async function save(transformed: NewRreo[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(RREO_ou_RGF)
             .ignore()
             .values(transformed);

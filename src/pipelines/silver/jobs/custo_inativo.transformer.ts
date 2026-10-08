@@ -1,9 +1,10 @@
-import { db } from "../../../database/dbConnection.js";
-import { Custo_Inativo, rawDs2CustosTtPessoalInativo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtPessoalInativo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { organizacaoTransformerOrchestrator } from "./organizacao.transformer.js";
 import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
+import { Custo_Inativo } from "../../../database/silver_schema.js";
 
 type RawInativo = typeof rawDs2CustosTtPessoalInativo.$inferSelect;
 type NewInativo = typeof Custo_Inativo.$inferInsert;
@@ -34,7 +35,7 @@ async function load(index: number): Promise<RawInativo[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs2CustosTtPessoalInativo).offset(nextOffset).limit(BATCH_SIZE) as RawInativo[];
+        const response = await bronzeDB.select().from(rawDs2CustosTtPessoalInativo).offset(nextOffset).limit(BATCH_SIZE) as RawInativo[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -85,7 +86,7 @@ async function save(transformed: NewInativo[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Custo_Inativo)
             .ignore()
             .values(transformed)

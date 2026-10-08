@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Area_Atuacao, rawDs2CustosTtPessoalAtivo } from "../../../database/schema.js";
+import { silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtPessoalAtivo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Area_Atuacao } from "../../../database/silver_schema.js";
 
 type RawCustoAtivo = typeof rawDs2CustosTtPessoalAtivo.$inferSelect;
 type NewAreaAtuacao = typeof Area_Atuacao.$inferInsert;
@@ -38,7 +39,7 @@ function transform(item: RawCustoAtivo): NewAreaAtuacao | null {
 async function save(transformed: NewAreaAtuacao) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Area_Atuacao)
             .ignore()
             .values(transformed);

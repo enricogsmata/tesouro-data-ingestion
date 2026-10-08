@@ -1,7 +1,8 @@
-import { db } from "../../../database/dbConnection.js";
-import { Cronograma_Pagamentos, rawDs1OpcCronogramaPagamentos } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1OpcCronogramaPagamentos } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
+import { Cronograma_Pagamentos } from "../../../database/silver_schema.js";
 
 type RawCronogramaPagamentos = typeof rawDs1OpcCronogramaPagamentos.$inferSelect;
 type NewCronogramaPagamentos = typeof Cronograma_Pagamentos.$inferInsert;
@@ -31,7 +32,7 @@ async function load(index: number): Promise<RawCronogramaPagamentos[]> {
     const log = logger.forMethod(`load`);
 
     try {
-        const raw: RawCronogramaPagamentos[] = await db.select().from(rawDs1OpcCronogramaPagamentos).offset(index * 1000).limit(BATCH_SIZE);
+        const raw: RawCronogramaPagamentos[] = await bronzeDB.select().from(rawDs1OpcCronogramaPagamentos).offset(index * 1000).limit(BATCH_SIZE);
         return raw;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -74,7 +75,7 @@ async function save(transformed: NewCronogramaPagamentos[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Cronograma_Pagamentos)
             .ignore()
             .values(transformed)

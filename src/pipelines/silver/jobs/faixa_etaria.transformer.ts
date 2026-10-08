@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Faixa_Etaria, rawDs2CustosTtPessoalAtivo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtPessoalAtivo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Faixa_Etaria } from "../../../database/silver_schema.js";
 
 type RawCustoAtivo = typeof rawDs2CustosTtPessoalAtivo.$inferSelect;
 type NewFaixaEtaria = typeof Faixa_Etaria.$inferInsert;
@@ -38,7 +39,7 @@ function transform(item: RawCustoAtivo): NewFaixaEtaria | null {
 async function save(transformed: NewFaixaEtaria) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Faixa_Etaria)
             .ignore()
             .values(transformed);

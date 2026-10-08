@@ -1,8 +1,8 @@
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { asc, eq } from 'drizzle-orm';
-import { db } from './database/dbConnection.js';
-import { endpoints } from './database/schema.js';
+import { bronzeDB } from './database/dbConnection.js';
+import { endpoints } from './database/bronze_schema.js';
 import { createLogger, sanitizelogsTable } from './services/logs.js';
 import { bronzeOrchestrator } from "./pipelines/bronze/main.js";
 import { silverOrchestrator } from "./pipelines/silver/main.js";
@@ -198,7 +198,7 @@ async function promptBronzeFetchOptions(rl: readline.Interface): Promise<Pipelin
     let endpointsList: { id: number; path: string }[] = [];
 
     try {
-        endpointsList = await db
+        endpointsList = await bronzeDB
             .select({ id: endpoints.id, path: endpoints.path })
             .from(endpoints)
             .orderBy(asc(endpoints.id));
@@ -363,7 +363,7 @@ async function run_cli() {
 
     // Se informado startEndpointId via flags, valida no banco se o endpoint existe
     if (executionOptions.startEndpointId) {
-        const [targetEndpoint] = await db
+        const [targetEndpoint] = await bronzeDB
             .select({ id: endpoints.id, path: endpoints.path })
             .from(endpoints)
             .where(eq(endpoints.id, executionOptions.startEndpointId));

@@ -1,8 +1,10 @@
-import { db } from "../../../database/dbConnection.js";
-import { PVL, rawDs1SadipemTtPvl } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1SadipemTtPvl } from "../../../database/bronze_schema.js";
+import { PVL } from "../../../database/silver_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
 import { credorTransformerOrchestrator } from "./credor.transformer.js";
+import { sql } from "drizzle-orm";
 
 type RawPvl = typeof rawDs1SadipemTtPvl.$inferSelect;
 type NewPvl = typeof PVL.$inferInsert;
@@ -15,13 +17,15 @@ export async function pvlTransformerOrchestrator() {
         for (let index = 0; ; index++) {
             const raw: RawPvl[] = await load(index);
             if (raw.length === 0) return;
+            log.info(`Raw Pvls Length: ${raw.length}`);
 
             const transformed: NewPvl[] | null = await transform(raw);
+            log.info(`Dados transformados gerados ${transformed?.length}`);
 
             if (transformed && transformed.length > 0)
-                await save(transformed); 
+                await save(transformed);
             else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Lista de dados tratados nula ou vazia: Loop ${index}.`);
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -33,7 +37,7 @@ async function load(index: number): Promise<RawPvl[]> {
 
     try {
         const nextOffset = index *= 1000;
-        const response = await db.select().from(rawDs1SadipemTtPvl).offset(nextOffset).limit(BATCH_SIZE) as RawPvl[];
+        const response = await bronzeDB.select().from(rawDs1SadipemTtPvl).offset(nextOffset).limit(BATCH_SIZE) as RawPvl[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -48,8 +52,12 @@ async function transform(rawPvls: RawPvl[]): Promise<NewPvl[] | null> {
         let transformed: NewPvl[] = [];
         for (const raw of rawPvls) {
             const idCredor: number | null = await credorTransformerOrchestrator(raw);
-            const dataProtocolo = raw.data_protocolo ? parseStringToDate(raw.data_protocolo) : null;
-            const dataStatus = raw.data_status ? parseStringToDate(raw.data_status, 'dd/MM/yyyy') : null;
+
+            let dataProtocolo: Date | undefined = raw.data_protocolo ? parseStringToDate(raw.data_protocolo) : undefined;
+            if (dataProtocolo && isNaN(dataProtocolo.getTime())) dataProtocolo = undefined;
+
+            let dataStatus = raw.data_status ? parseStringToDate(raw.data_status, 'dd/MM/yyyy') : null;
+            if (dataStatus && isNaN(dataStatus.getTime())) dataStatus = null;
 
             if (idCredor && raw.cod_ibge) {
                 const newPvl: NewPvl = {
@@ -83,13 +91,29 @@ async function transform(rawPvls: RawPvl[]): Promise<NewPvl[] | null> {
 
 async function save(transformed: NewPvl[]) {
     const log = logger.forMethod('save');
-
     try {
-        await db
+        log.info(`Inserindo ${transformed.length} valores`);
+        await silverDB
             .insert(PVL)
-            .ignore()
             .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    cod_ibge: sql`values(${PVL.cod_ibge})`,
+                    num_pvl: sql`values(${PVL.num_pvl})`,
+                    status: sql`values(${PVL.status})`,
+                    num_processo: sql`values(${PVL.num_processo})`,
+                    data_protocolo: sql`values(${PVL.data_protocolo})`,
+                    tipo_operacao: sql`values(${PVL.tipo_operacao})`,
+                    finalidade: sql`values(${PVL.finalidade})`,
+                    id_credor: sql`values(${PVL.id_credor})`,
+                    moeda: sql`values(${PVL.moeda})`,
+                    valor: sql`values(${PVL.valor})`,
+                    pvl_assoc_divida: sql`values(${PVL.pvl_assoc_divida})`,
+                    pvl_contratado_credor: sql`values(${PVL.pvl_contratado_credor})`,
+                    data_status: sql`values(${PVL.data_status})`,
+                },
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

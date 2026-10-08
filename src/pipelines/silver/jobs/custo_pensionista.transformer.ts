@@ -1,9 +1,10 @@
-import { db } from "../../../database/dbConnection.js";
-import { Custo_Pensionista, rawDs2CustosTtPensionistas } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtPensionistas } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { organizacaoTransformerOrchestrator } from "./organizacao.transformer.js";
 import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
+import { Custo_Pensionista } from "../../../database/silver_schema.js";
 
 type RawPensionista = typeof rawDs2CustosTtPensionistas.$inferSelect;
 type NewPensionista = typeof Custo_Pensionista.$inferInsert;
@@ -34,7 +35,7 @@ async function load(index: number): Promise<RawPensionista[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs2CustosTtPensionistas).offset(nextOffset).limit(BATCH_SIZE) as RawPensionista[];
+        const response = await bronzeDB.select().from(rawDs2CustosTtPensionistas).offset(nextOffset).limit(BATCH_SIZE) as RawPensionista[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -85,7 +86,7 @@ async function save(transformed: NewPensionista[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Custo_Pensionista)
             .ignore()
             .values(transformed)

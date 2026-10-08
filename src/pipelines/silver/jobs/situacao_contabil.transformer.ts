@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Situacao_Contabil_Lancamento, rawDs2CustosTtDemais } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtDemais } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Situacao_Contabil_Lancamento } from "../../../database/silver_schema.js";
 
 type RawDemaisCustos = typeof rawDs2CustosTtDemais.$inferSelect;
 type NewSituacaoContabil = typeof Situacao_Contabil_Lancamento.$inferInsert;
@@ -38,7 +39,7 @@ function transform(item: RawDemaisCustos): NewSituacaoContabil | null {
 async function save(transformed: NewSituacaoContabil) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Situacao_Contabil_Lancamento)
             .ignore()
             .values(transformed);

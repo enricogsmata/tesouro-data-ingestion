@@ -1,14 +1,5 @@
 import { createLogger } from "../../services/logs.js";
-import { custoPensionistaTransformerOrchestrator } from "./jobs/custo_pensionista.transformer.js";
-import { depreciacaoTransformerOrchestrator } from "./jobs/depreciacao.transformer.js";
-import { cronogramaLiberacoesOrchestrator } from "./jobs/opc-cronograma-liberacoes.transformer.js";
-import { cronogramaPagamentosOrchestrator } from "./jobs/opc-cronograma-pagamentos.transformer.js";
-import { taxaCambioOrchestrator } from "./jobs/opc-taxa-cambio.transformer.js";
-
-import { tramitacaoDeferidoOrchestrator } from "./jobs/opnc-pvl-tramitacao-deferido.transformer.js";
 import { pvlTransformerOrchestrator } from "./jobs/pvl.transformer.js";
-import { cdpOrchestrator } from "./jobs/res-cdp.transformer.js";
-import { resCronogramaPagamentosOrchestrator } from "./jobs/res-cronograma-pagamentos.transformer.js";
 
 const logger = createLogger(import.meta.url);
 
@@ -19,5 +10,7 @@ export async function silverOrchestrator() {
     // 0. TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS EXTRAÍDOS
     // ==================================================
     log.info(`[INICIANDO TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS]`);
+    await pvlTransformerOrchestrator();
+    log.info(`[TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS FINALIZADA]`);
     return;
 }

@@ -18,23 +18,10 @@ const IS_SAMPLING_MODE = false;
  * @param DataSources - Conjunto de fontes de dados extraídos na página do CKAN
  * @param endpoints - Conjunto de endpoint extraídos das fontes de dados do CKAN
  */
-export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[], startEndpointId?: number, startOffset?: number, maxOffset?: number, singleEndpoint?: boolean) {
+export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[]) {
     const context = `EndpointFetcherOrchestrator`;
 
-    // Garante que a lista esteja ordenada por ID e filtra se necessário
-    const targetEndpoints = (
-        singleEndpoint && startEndpointId
-            ? endpoints.filter(ep => ep.id === startEndpointId)
-            : (startEndpointId && startEndpointId > 1
-                ? endpoints.filter(ep => ep.id >= startEndpointId)
-                : endpoints)
-    ).slice().sort((a, b) => a.id - b.id);
-
-    for (let i = 0; i < targetEndpoints.length; i++) {
-        const endpoint = targetEndpoints[i]!;
-        const isFirstEndpoint = (i === 0);
-        const initialOffset = isFirstEndpoint ? startOffset : 0;
-
+    for (const endpoint of endpoints) {
         // 1. Limpa a tabela genérica para garantir unicidade
         await bronzeDB.delete(rawEndpointResponse).where(eq(rawEndpointResponse.endpointId, endpoint.id));
 
@@ -59,12 +46,8 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
         }
 
         try {
-            logger.info(
-                { context, data: `[ID: ${endpoint.id} | Path: ${pathStr}]` },
-                `> [ENDPOINT ${endpoint.id}] Extraindo dados: ${pathStr}`
-            );
             const fullUrl: string = new URL(pathStr, baseUrl).toString();
-            await EndpointFetcher(fullUrl, endpoint, maxOffset, initialOffset);
+            await EndpointFetcher(fullUrl, endpoint);
         } catch (error: any) {
             logger.fatal({ context: context, data: `${error}` }, `[ERRO] Falha ao construir a URL para consulta do endpoint.`);
             continue;
@@ -78,7 +61,7 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
  * @param endpoint - Objeto do endpoint que será feita a requisição
  * @returns - Em caso de erro paralisa a execução do método
  */
-async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: number, initialOffset?: number) {
+async function EndpointFetcher(fullUrl: string, endpoint: Endpoint) {
     const context = `EndpointFetcher`;
 
     const isCached = await isEndpointCached(endpoint.id);
@@ -94,6 +77,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
         let paramKeys: string[] = [];
 
         if (requiredParams.length > 0) {
+            /* ... (Lógica de resolução de parâmetros mantida idêntica) ... */
             const resolvedParams: Record<string, any[]> = {};
             for (const reqParam of requiredParams) {
                 if (reqParam.name) {
@@ -121,7 +105,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
         }
 
         for (const combination of combinations) {
-            let currentQueryParams: Record<string, any> = { offset: initialOffset ?? 0 };
+            let currentQueryParams: Record<string, any> = { offset: 0 };
             if (IS_SAMPLING_MODE) currentQueryParams.limit = 1;
 
             const combArray = Array.isArray(combination) ? combination : [combination];
@@ -138,15 +122,8 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
                     config.params = { ...currentQueryParams, ...parsedNextParams };
                 }
 
-                const currentOffsetForCheck = Number(config.params.offset || 0);
-                if (maxOffset !== undefined && currentOffsetForCheck > maxOffset) {
-                    logger.info({ context, data: `Endpoint ID: ${endpoint.id}` }, `[INFO] Limite de offset máximo (${maxOffset}) atingido/ultrapassado. Encerrando fetch para este endpoint.`);
-                    hasNext = false;
-                    break;
-                }
-
                 await new Promise((resolve) => setTimeout(resolve, 1200));
-
+                
                 let response: any;
                 const MAX_ATTEMPTS = 5;
                 const RETRY_DELAY_MS = 2000;
@@ -157,7 +134,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
                         break;
                     } catch (error: any) {
                         logger.warn({ context: context, data: `FULL URL: ${fullUrl} | Erro: ${error}` }, `[WARN] Falha na requisição do endpoint: ${attempt} tentativa(s) realizada(s).`);
-                        if (attempt === MAX_ATTEMPTS) throw error;
+                        if (attempt === MAX_ATTEMPTS) throw error; 
                         else await new Promise((resolver) => setTimeout(resolver, RETRY_DELAY_MS * attempt));
                     }
                 }
@@ -182,6 +159,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
 
                 response.request.url = response.request.url ?? fullUrl;
 
+                // >>> ALTERAÇÃO CIRÚRGICA: Passando o objeto 'endpoint' completo ao invés de apenas o ID <<<
                 await PersistRawEndpointResponse(response, endpoint);
 
                 nextHref = ckeckIfHasNext(response);
@@ -248,7 +226,7 @@ async function PersistRawEndpointResponse(response: any, endpoint: Endpoint) {
         if (endpoint.targetTable) {
             // Recupera o schema da tabela com base no dicionário importado
             const targetSchema = (tablesMap as any)[endpoint.targetTable];
-
+            
             if (targetSchema) {
                 // O Drizzle faz o bulk insert automaticamente com array de objetos
                 // Se o JSON tiver colunas a mais que o schema, o Drizzle as ignora com segurança

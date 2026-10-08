@@ -1,8 +1,9 @@
-import { db } from "../../../database/dbConnection.js";
-import { Ente, rawDs4SiconfiTtEntes } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtEntes } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { populacaoAnualEnteTransformerOrchestrator } from "./populacao_anual_ente.transformer.js";
+import { Ente } from "../../../database/silver_schema.js";
 
 type RawEnte = typeof rawDs4SiconfiTtEntes.$inferSelect;
 type NewEnte = typeof Ente.$inferInsert;
@@ -33,7 +34,7 @@ async function load(index: number): Promise<RawEnte[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs4SiconfiTtEntes).offset(nextOffset).limit(BATCH_SIZE) as RawEnte[];
+        const response = await bronzeDB.select().from(rawDs4SiconfiTtEntes).offset(nextOffset).limit(BATCH_SIZE) as RawEnte[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -83,7 +84,7 @@ async function save(transformed: NewEnte[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(Ente)
             .ignore()
             .values(transformed);

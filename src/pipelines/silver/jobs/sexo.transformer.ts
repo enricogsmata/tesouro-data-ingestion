@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Sexo, rawDs2CustosTtPessoalAtivo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtPessoalAtivo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Sexo } from "../../../database/silver_schema.js";
 
 type RawCustoAtivo = typeof rawDs2CustosTtPessoalAtivo.$inferSelect;
 type NewSexo = typeof Sexo.$inferInsert;
@@ -37,7 +38,7 @@ function transform(item: RawCustoAtivo): NewSexo | null {
 async function save(transformed: NewSexo) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Sexo)
             .ignore()
             .values(transformed);

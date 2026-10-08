@@ -1,5 +1,5 @@
-import { db } from "../../../database/dbConnection.js";
-import { Conta_Contabil } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { Conta_Contabil } from "../../../database/silver_schema.js";
 import { createLogger } from "../../../services/logs.js";
 
 type RawContaContabil = typeof Conta_Contabil.$inferInsert;
@@ -50,7 +50,7 @@ function transform(raw: any): RawContaContabil | null {
 async function save(transformed: RawContaContabil) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Conta_Contabil)
             .ignore()
             .values(transformed);

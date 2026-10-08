@@ -1,7 +1,8 @@
-import { db } from "../../../database/dbConnection.js";
-import { Cambio, rawDs1OpcTaxaCambio } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1OpcTaxaCambio } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
+import { Cambio } from "../../../database/silver_schema.js";
 
 type RawTaxaCambio = typeof rawDs1OpcTaxaCambio.$inferSelect;
 type NewTaxaCambio = typeof Cambio.$inferInsert;
@@ -31,7 +32,7 @@ async function load(index: number): Promise<RawTaxaCambio[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawTaxaCambio[] = await db
+        const raw: RawTaxaCambio[] = await bronzeDB
             .select()
             .from(rawDs1OpcTaxaCambio)
             .offset(index * 1000)
@@ -80,7 +81,7 @@ async function save(transformed: NewTaxaCambio[]) {
     const log = logger.forMethod(`save`);
 
     try {
-        await db
+        await silverDB
             .insert(Cambio)
             .ignore()
             .values(transformed);

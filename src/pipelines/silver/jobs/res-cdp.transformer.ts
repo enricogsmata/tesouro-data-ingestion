@@ -1,7 +1,8 @@
-import { db } from "../../../database/dbConnection.js";
-import { CDP, rawDs1TtResCdp } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs1TtResCdp } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
+import { CDP } from "../../../database/silver_schema.js";
 
 type RawCDP = typeof rawDs1TtResCdp.$inferSelect;
 type NewCDP = typeof CDP.$inferInsert;
@@ -32,7 +33,7 @@ async function load(index: number): Promise<RawCDP[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawCDP[] = await db
+        const raw: RawCDP[] = await bronzeDB
             .select()
             .from(rawDs1TtResCdp)
             .offset(index * 1000)
@@ -82,7 +83,7 @@ async function save(transformed: NewCDP[]) {
     const log = logger.forMethod(`save`);
 
     try {
-        await db
+        await silverDB
             .insert(CDP)
             .ignore()
             .values(transformed);

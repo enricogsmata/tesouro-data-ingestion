@@ -1,8 +1,9 @@
-import { db } from "../../../database/dbConnection.js";
-import { MSC_Patrimonial, rawDs4SiconfiTtMscPatrimonial } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtMscPatrimonial } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { contaContabilTransformerOrchestrator } from "./conta-contabil.transformer.js";
+import { MSC_Patrimonial } from "../../../database/silver_schema.js";
 
 type RawMscPatrimonial = typeof rawDs4SiconfiTtMscPatrimonial.$inferSelect;
 type NewMscPatrimonial = typeof MSC_Patrimonial.$inferInsert;
@@ -33,7 +34,7 @@ async function load(index: number): Promise<RawMscPatrimonial[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs4SiconfiTtMscPatrimonial).offset(nextOffset).limit(BATCH_SIZE) as RawMscPatrimonial[];
+        const response = await bronzeDB.select().from(rawDs4SiconfiTtMscPatrimonial).offset(nextOffset).limit(BATCH_SIZE) as RawMscPatrimonial[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -86,7 +87,7 @@ async function save(transformed: NewMscPatrimonial[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(MSC_Patrimonial)
             .ignore()
             .values(transformed);

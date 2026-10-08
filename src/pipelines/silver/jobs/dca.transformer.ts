@@ -1,5 +1,5 @@
-import { db } from "../../../database/dbConnection.js";
-import { DCA, rawDs4SiconfiTtDca } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtDca } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { instituicaoTransformerOrchestrator } from "./instituicao.transformer.js";
@@ -8,6 +8,7 @@ import { anexoTransformerOrchestrator } from "./anexo.transformer.js";
 import { rotuloTransformerOrchestrator } from "./rotulo.transformer.js";
 import { colunaTransformerOrchestrator } from "./coluna.transformer.js";
 import { contaTransformerOrchestrator } from "./conta.transformer.js";
+import { DCA } from "../../../database/silver_schema.js";
 
 type RawDca = typeof rawDs4SiconfiTtDca.$inferSelect;
 type NewDca = typeof DCA.$inferInsert;
@@ -38,7 +39,7 @@ async function load(index: number): Promise<RawDca[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs4SiconfiTtDca).offset(nextOffset).limit(BATCH_SIZE) as RawDca[];
+        const response = await bronzeDB.select().from(rawDs4SiconfiTtDca).offset(nextOffset).limit(BATCH_SIZE) as RawDca[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -100,7 +101,7 @@ async function save(transformed: NewDca[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(DCA)
             .ignore()
             .values(transformed);

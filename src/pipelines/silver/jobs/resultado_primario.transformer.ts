@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Resultado_Primario, rawDs2CustosTtTransferencias } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs2CustosTtTransferencias } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Resultado_Primario } from "../../../database/silver_schema.js";
 
 type RawTransferencia = typeof rawDs2CustosTtTransferencias.$inferSelect;
 type NewResultadoPrimario = typeof Resultado_Primario.$inferInsert;
@@ -38,7 +39,7 @@ function transform(item: RawTransferencia): NewResultadoPrimario | null {
 async function save(transformed: NewResultadoPrimario) {
     const log = logger.forMethod('save');
     try {
-        await db
+        await silverDB
             .insert(Resultado_Primario)
             .ignore()
             .values(transformed);

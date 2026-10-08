@@ -1,5 +1,5 @@
-import { db } from "../../../database/dbConnection.js";
-import { Organizacao } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { Organizacao } from "../../../database/silver_schema.js";
 import { createLogger } from "../../../services/logs.js";
 
 export type Organizacoes = {
@@ -82,11 +82,10 @@ async function save(transformed: NewOrganizacao[]) {
     try {
         if (transformed.length === 0) return [];
 
-        const inserted =
-            await db
-                .insert(Organizacao)
-                .ignore()
-                .values(transformed)
+        await silverDB
+            .insert(Organizacao)
+            .ignore()
+            .values(transformed)
 
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);

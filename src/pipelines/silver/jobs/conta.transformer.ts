@@ -1,6 +1,7 @@
-import { db } from "../../../database/dbConnection.js";
-import { Conta, rawDs4SiconfiTtRreo } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtRreo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { Conta } from "../../../database/silver_schema.js";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewConta = typeof Conta.$inferInsert;
@@ -36,7 +37,7 @@ function transform(item: RawRreo): NewConta | null {
 async function save(transformed: NewConta) {
     const log = logger.forMethod('save');
     try {
-        await db.insert(Conta).ignore().values(transformed);
+        await silverDB.insert(Conta).ignore().values(transformed);
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
     }

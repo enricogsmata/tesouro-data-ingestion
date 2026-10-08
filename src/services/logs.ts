@@ -1,8 +1,8 @@
 import { type Log, type LOG_LEVELS } from "../database/types.js";
-import { logs } from "../database/schema.js";
+import { logs } from "../database/bronze_schema.js";
 import { Writable } from "stream";
 import pino from "pino";
-import { db } from "../database/dbConnection.js";
+import { bronzeDB } from "../database/dbConnection.js";
 import { gte } from "drizzle-orm";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,14 +13,14 @@ const prettyTransport = pino.transport({
     options: { colorize: true }
 });
 
-const dbStream = new Writable({
+const bronzeDBStream = new Writable({
     async write(chunk, encoding, callback) {
         try {
             const logObject: Log = JSON.parse(chunk.toString());
             const logLevel = logObject.level ? parseLogLevel(logObject.level) : 'UNDEFINED';
 
             if (logObject.level && logObject.level >= 40) {
-                await db.insert(logs).values({
+                await bronzeDB.insert(logs).values({
                     message: logObject.msg || 'EMPTY',
                     data: logObject.data || null,
                     sourceModule: logObject.module || null,
@@ -42,7 +42,7 @@ const baseLogger = pino(
     { level: process.env.LOG_LEVELS || 'debug' },
     pino.multistream([
         { stream: prettyTransport },
-        { stream: dbStream }
+        { stream: bronzeDBStream }
     ])
 );
 
@@ -66,7 +66,7 @@ export function createLogger(importMetaUrl: string) {
  */
 export async function sanitizelogsTable() {
     const CACHE = 30 * 24 * 60 * 60 * 1000; // 30 dias
-    await db
+    await bronzeDB
         .delete(logs)
         .where(gte(logs.generatedAt, new Date(Date.now() - CACHE))); // ⚠️ Corrigido cálculo de data
 }

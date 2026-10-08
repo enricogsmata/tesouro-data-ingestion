@@ -1,8 +1,9 @@
-import { db } from "../../../database/dbConnection.js";
-import { MSC_Controle, rawDs4SiconfiTtMscControle } from "../../../database/schema.js";
+import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
+import { rawDs4SiconfiTtMscControle } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { contaContabilTransformerOrchestrator } from "./conta-contabil.transformer.js";
+import { MSC_Controle } from "../../../database/silver_schema.js";
 
 type RawMscControle = typeof rawDs4SiconfiTtMscControle.$inferSelect;
 type NewMscControle = typeof MSC_Controle.$inferInsert;
@@ -33,7 +34,7 @@ async function load(index: number): Promise<RawMscControle[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await db.select().from(rawDs4SiconfiTtMscControle).offset(nextOffset).limit(BATCH_SIZE) as RawMscControle[];
+        const response = await bronzeDB.select().from(rawDs4SiconfiTtMscControle).offset(nextOffset).limit(BATCH_SIZE) as RawMscControle[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -57,7 +58,7 @@ async function transform(rawItems: RawMscControle[]): Promise<NewMscControle[] |
             ) {
                 const newMscControle: NewMscControle = {
                     tipo_matriz: raw.tipo_matriz ?? null,
-                    cod_ibge: raw.cod_ibge.toString(),
+                    cod_ibge: raw.cod_ibge,
                     conta_contabil: idContaContabil,
                     poder_orgao: raw.poder_orgao ?? null,
                     fonte_recursos: raw.fonte_recursos ?? null,
@@ -90,7 +91,7 @@ async function save(transformed: NewMscControle[]) {
     const log = logger.forMethod('save');
 
     try {
-        await db
+        await silverDB
             .insert(MSC_Controle)
             .ignore()
             .values(transformed);

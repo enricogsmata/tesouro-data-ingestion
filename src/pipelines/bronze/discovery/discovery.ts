@@ -7,7 +7,7 @@ import puppeteer, { Browser } from "puppeteer";
 import YAML from 'yaml';
 import path from "path";
 import { fileURLToPath } from "url";
-import { db } from "../../../database/dbConnection.js";
+import { bronzeDB } from "../../../database/dbConnection.js";
 import type { NewDataSource } from "../../../database/types.js";
 import { createLogger } from "../../../services/logs.js";
 
@@ -61,7 +61,7 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
     for (const discoveredDatasetHref of discoveredDatasetHrefs) {
         // [TASK 2] Extração do URL da página do conjunto de dados descoberto
         // > Essa página contém as informações gerais, arquivos, e link para a API
-        let datasetPageUrl: string | null = await BuildDatasetPageUrl(discoveredDatasetHref, ckanMainPageBaseUrl, db)
+        let datasetPageUrl: string | null = await BuildDatasetPageUrl(discoveredDatasetHref, ckanMainPageBaseUrl, bronzeDB)
 
         // - ERRO -
         if (!datasetPageUrl) {
@@ -124,17 +124,17 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
         }
         // - - -
 
-        const sanitizedBaseUrl = sanitizeBaseUrl(datasetBaseUrl);
+        const sanitizebronzeDBaseUrl = sanitizeBaseUrl(datasetBaseUrl);
 
         // > Cancelamos o processo caso a URL base encontrada já esteja inserida no vetor de conjuntos de dados obtidos.
         // ! Isso evita consulta à mesma API/Endpoints de modo desnecessário/duplicado, economizando processamento e tratamento de dados futuro.
-        if (builtDataSources.some(ds => ds.baseUrl === sanitizedBaseUrl)) {
-            logger.debug({ context: context, data: sanitizedBaseUrl }, `[SKIP] URL Base já processada!`);
+        if (builtDataSources.some(ds => ds.baseUrl === sanitizebronzeDBaseUrl)) {
+            logger.debug({ context: context, data: sanitizebronzeDBaseUrl }, `[SKIP] URL Base já processada!`);
             continue;
         }
 
         // - LOG -
-        logger.debug({ context: context, data: `sanitizedBaseUrl` }, `[5 | DATA] Nova url base extraída.`);
+        logger.debug({ context: context, data: `sanitizebronzeDBaseUrl` }, `[5 | DATA] Nova url base extraída.`);
         // - - -
 
         // - ERRO -
@@ -148,7 +148,7 @@ export async function BuildDataSources(): Promise<NewDataSource[] | null> {
         const IDataSourceTitle = datasetApiMetadata['info']['title'] || '';
         const newIDataSource: NewDataSource = {
             title: IDataSourceTitle,
-            baseUrl: sanitizedBaseUrl,
+            baseUrl: sanitizebronzeDBaseUrl,
             rawMetadata: JSON.stringify(datasetApiMetadata)
         }
 
@@ -580,7 +580,7 @@ async function LoadAxios(pageUrl: string): Promise<AxiosResponse | null> {
     - AUXILIAR -
     > Construção da url da página do conjunto de dados obtido
 */
-async function BuildDatasetPageUrl(discoveredDatasetHref: string, ckanMainPageBaseUrl: URL, db: any): Promise<string | null> {
+async function BuildDatasetPageUrl(discoveredDatasetHref: string, ckanMainPageBaseUrl: URL, bronzeDB: any): Promise<string | null> {
     const context = `BuildDatasetPageUrl`;
     const datasetPageUrl = new URL(discoveredDatasetHref, ckanMainPageBaseUrl);
 

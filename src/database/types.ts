@@ -1,4 +1,4 @@
-import { apiLinks, dataSources, endpoints, rawEndpointResponse, endpointParameters } from "./schema.js";
+import { apiLinks, dataSources, endpoints, rawEndpointResponse, endpointParameters } from "./bronze_schema.js";
 
 export type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
