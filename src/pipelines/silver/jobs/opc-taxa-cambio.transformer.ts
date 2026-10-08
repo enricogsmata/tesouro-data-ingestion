@@ -3,6 +3,7 @@ import { rawDs1OpcTaxaCambio } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
 import { Cambio } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawTaxaCambio = typeof rawDs1OpcTaxaCambio.$inferSelect;
 type NewTaxaCambio = typeof Cambio.$inferInsert;
@@ -83,9 +84,16 @@ async function save(transformed: NewTaxaCambio[]) {
     try {
         await silverDB
             .insert(Cambio)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    id_pleito: sql`values(${Cambio.id_pleito})`,
+                    data_taxa_cambio: sql`values(${Cambio.data_taxa_cambio})`,
+                    moeda: sql`values(${Cambio.moeda})`,
+                    taxa_cambio: sql`values(${Cambio.taxa_cambio})`
+                }
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }
