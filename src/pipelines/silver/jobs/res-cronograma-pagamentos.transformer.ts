@@ -3,6 +3,7 @@ import { rawDs1ResCronogramaPagamentos } from "../../../database/bronze_schema.j
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { Resumo_Cronograma_Pagamentos } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawResCronogramaPagamentos = typeof rawDs1ResCronogramaPagamentos.$inferSelect;
 type NewResCronogramaPagamentos = typeof Resumo_Cronograma_Pagamentos.$inferInsert;
@@ -81,9 +82,16 @@ async function save(transformed: NewResCronogramaPagamentos[]) {
     try {
         await silverDB
             .insert(Resumo_Cronograma_Pagamentos)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    ano: sql`values(${Resumo_Cronograma_Pagamentos.ano})`,
+                    demais_operacoes: sql`values(${Resumo_Cronograma_Pagamentos.demais_operacoes})`,
+                    id_pleito: sql`values(${Resumo_Cronograma_Pagamentos.id_pleito})`,
+                    operacao_pleiteada: sql`values(${Resumo_Cronograma_Pagamentos.operacao_pleiteada})`,
+                }
+            })
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

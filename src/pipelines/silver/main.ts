@@ -4,6 +4,7 @@ import { cronogramaLiberacoesOrchestrator } from "./jobs/opc-cronograma-liberaco
 import { cronogramaPagamentosOrchestrator } from "./jobs/opc-cronograma-pagamentos.transformer.js";
 import { taxaCambioOrchestrator } from "./jobs/opc-taxa-cambio.transformer.js";
 import { pvlTransformerOrchestrator } from "./jobs/pvl.transformer.js";
+import { resCronogramaPagamentosOrchestrator } from "./jobs/res-cronograma-pagamentos.transformer.js";
 
 const logger = createLogger(import.meta.url);
 
@@ -18,7 +19,8 @@ export async function silverOrchestrator() {
     //await pvlTransformerOrchestrator();
     //await cronogramaPagamentosOrchestrator();
     //await cronogramaLiberacoesOrchestrator();
-    await taxaCambioOrchestrator();
+    //await taxaCambioOrchestrator();
+    await resCronogramaPagamentosOrchestrator();
     log.info(`[TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS FINALIZADA]`);
     return;
 }
