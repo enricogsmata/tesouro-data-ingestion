@@ -4,6 +4,7 @@ import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { populacaoAnualEnteTransformerOrchestrator } from "./populacao_anual_ente.transformer.js";
 import { Ente } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawEnte = typeof rawDs4SiconfiTtEntes.$inferSelect;
 type NewEnte = typeof Ente.$inferInsert;
@@ -20,9 +21,9 @@ export async function enteTransformerOrchestrator() {
             const transformed: NewEnte[] | null = await transform(raw);
 
             if (transformed && transformed.length > 0)
-                await save(transformed); 
+                await save(transformed);
             else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Lista de dados tratados nula ou vazia.`);
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -48,7 +49,7 @@ async function transform(rawItems: RawEnte[]): Promise<NewEnte[] | null> {
     try {
         let transformed: NewEnte[] = [];
         for (const raw of rawItems) {
-            
+
             await populacaoAnualEnteTransformerOrchestrator({
                 cod_ibge: raw.cod_ibge,
                 exercicio: raw.an_exercicio,
@@ -68,7 +69,7 @@ async function transform(rawItems: RawEnte[]): Promise<NewEnte[] | null> {
                     esfera: raw.esfera ?? null,
                     co_cnpj: raw.co_cnpj ?? null,
                 };
-                
+
                 transformed.push(newEnte);
             }
         }
@@ -86,8 +87,18 @@ async function save(transformed: NewEnte[]) {
     try {
         await silverDB
             .insert(Ente)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    capital: sql`values(${Ente.capital})`,
+                    co_cnpj: sql`values(${Ente.co_cnpj})`,
+                    ente: sql`values(${Ente.ente})`,
+                    cod_ibge: sql`values(${Ente.cod_ibge})`,
+                    esfera: sql`values(${Ente.esfera})`,
+                    regiao: sql`values(${Ente.regiao})`,
+                    uf: sql`values(${Ente.uf})`,
+                }
+            })
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
     }

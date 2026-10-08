@@ -17,10 +17,8 @@ export async function pvlTransformerOrchestrator() {
         for (let index = 0; ; index++) {
             const raw: RawPvl[] = await load(index);
             if (raw.length === 0) return;
-            log.info(`Raw Pvls Length: ${raw.length}`);
 
             const transformed: NewPvl[] | null = await transform(raw);
-            log.info(`Dados transformados gerados ${transformed?.length}`);
 
             if (transformed && transformed.length > 0)
                 await save(transformed);
@@ -92,7 +90,6 @@ async function transform(rawPvls: RawPvl[]): Promise<NewPvl[] | null> {
 async function save(transformed: NewPvl[]) {
     const log = logger.forMethod('save');
     try {
-        log.info(`Inserindo ${transformed.length} valores`);
         await silverDB
             .insert(PVL)
             .values(transformed)
