@@ -3,6 +3,7 @@ import { rawDs1TtResCdp } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
 import { CDP } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawCDP = typeof rawDs1TtResCdp.$inferSelect;
 type NewCDP = typeof CDP.$inferInsert;
@@ -55,9 +56,11 @@ async function transform(raw: RawCDP[]): Promise<NewCDP[]> {
             let dataBase: Date | null = null;
             let dataStatus: Date | null = null;
 
-            if (item.data_base)
+            if (item.data_base) {
+                item.data_base.trim();
+                if (item.data_base.length === 4) item.data_base = `01/01/${item.data_base}`
                 dataBase = parseStringToDate(item.data_base, 'dd/MM/yyyy') ?? null;
-
+            }
             if (item.data_status)
                 dataStatus = parseStringToDate(item.data_status, 'dd/MM/yyyy HH/mm/ss') ?? null;
 
@@ -85,9 +88,17 @@ async function save(transformed: NewCDP[]) {
     try {
         await silverDB
             .insert(CDP)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    data_base: sql`values(${CDP.data_base})`,
+                    data_status: sql`values(${CDP.data_status})`,
+                    id_pleito: sql`values(${CDP.id_pleito})`,
+                    situacao_ente: sql`values(${CDP.situacao_ente})`,
+                    status: sql`values(${CDP.status})`,
+                }
+            })
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }
