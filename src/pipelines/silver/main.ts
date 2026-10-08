@@ -1,5 +1,6 @@
 import { createLogger } from "../../services/logs.js";
 import { enteTransformerOrchestrator } from "./jobs/ente.transformer.js";
+import { cronogramaLiberacoesOrchestrator } from "./jobs/opc-cronograma-liberacoes.transformer.js";
 import { cronogramaPagamentosOrchestrator } from "./jobs/opc-cronograma-pagamentos.transformer.js";
 import { pvlTransformerOrchestrator } from "./jobs/pvl.transformer.js";
 
@@ -14,7 +15,8 @@ export async function silverOrchestrator() {
     log.info(`[INICIANDO TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS]`);
     //await enteTransformerOrchestrator();
     //await pvlTransformerOrchestrator();
-    await cronogramaPagamentosOrchestrator();
+    //await cronogramaPagamentosOrchestrator();
+    await cronogramaLiberacoesOrchestrator();
     log.info(`[TRANSFORMAÇÃO E PERSISTÊNCIA DE DADOS FINALIZADA]`);
     return;
 }

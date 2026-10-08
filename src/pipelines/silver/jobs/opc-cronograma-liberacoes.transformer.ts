@@ -3,6 +3,7 @@ import { rawDs1OpcCronogramaLiberacoes } from "../../../database/bronze_schema.j
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { Cronograma_Liberacoes } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawCronogramaLiberacoes = typeof rawDs1OpcCronogramaLiberacoes.$inferSelect;
 type NewCronogramaLiberacoes = typeof Cronograma_Liberacoes.$inferInsert;
@@ -79,9 +80,19 @@ async function save(transformed: NewCronogramaLiberacoes[]) {
     try {
         await silverDB
             .insert(Cronograma_Liberacoes)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    id_pleito: sql`values(${Cronograma_Liberacoes.id_pleito})`,
+                    ano: sql`values(${Cronograma_Liberacoes.ano})`,
+                    indicador_liberacoes: sql`values(${Cronograma_Liberacoes.indicador_liberacoes})`,
+                    liberacoes_aro: sql`values(${Cronograma_Liberacoes.liberacoes_aro})`,
+                    liberacoes_demais: sql`values(${Cronograma_Liberacoes.liberacoes_demais})`,
+                    liberacoes_operacoes_sfn: sql`values(${Cronograma_Liberacoes.liberacoes_operacoes_sfn})`,
+                    liberacoes_total: sql`values(${Cronograma_Liberacoes.liberacoes_total})`
+                }
+            })
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência dos dados tratados.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }
