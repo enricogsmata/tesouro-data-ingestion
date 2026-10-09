@@ -1,9 +1,9 @@
 import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
-import { rawDs1OpcCronogramaLiberacoes } from "../../../database/bronze_schema.js";
+import { rawDs1OpcCronogramaLiberacoes, rawDs1SadipemTtPvl } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE } from "../utils.js";
 import { Cronograma_Liberacoes } from "../../../database/silver_schema.js";
-import { sql } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 
 type RawCronogramaLiberacoes = typeof rawDs1OpcCronogramaLiberacoes.$inferSelect;
 type NewCronogramaLiberacoes = typeof Cronograma_Liberacoes.$inferInsert;
@@ -34,13 +34,21 @@ async function load(index: number): Promise<RawCronogramaLiberacoes[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawCronogramaLiberacoes[] = await bronzeDB
+        const queryResult = await bronzeDB
             .select()
             .from(rawDs1OpcCronogramaLiberacoes)
-            .offset(index * 1000)
+            // 1. INNER JOIN filtra os id_pleito órfãos que quebram a FK no save()
+            .innerJoin(
+                rawDs1SadipemTtPvl,
+                eq(rawDs1OpcCronogramaLiberacoes.id_pleito, rawDs1SadipemTtPvl.id_pleito)
+            )
+            // 2. Ordenação obrigatória para garantir estabilidade da paginação
+            .orderBy(asc(rawDs1OpcCronogramaLiberacoes.id))
+            // 3. Offset dinâmico baseado no BATCH_SIZE correto
+            .offset(index * BATCH_SIZE)
             .limit(BATCH_SIZE);
 
-        return raw;
+        return queryResult.map(row => row.raw_ds1_opc_cronograma_liberacoes);
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
         return [];
@@ -53,18 +61,20 @@ async function transform(raw: RawCronogramaLiberacoes[]): Promise<NewCronogramaL
     try {
         let transformed: NewCronogramaLiberacoes[] = [];
         for (const item of raw) {
-            const newCronogramaLiberacoes: NewCronogramaLiberacoes = {
-                id_pleito: item.id_pleito,
-                ano: item.ano,
-                indicador_liberacoes: item.indicador_liberacoes,
-                liberacoes_aro: item.liberacoes_aro,
-                liberacoes_demais: item.liberacoes_demais,
-                liberacoes_operacoes_sfn: item.liberacoes_operacoes_sfn,
-                liberacoes_total: item.liberacoes_total,
-            }
+            // Garante que ambos os campos essenciais da PK/dados existem
+            if (item.id_pleito && item.ano) {
+                const newCronogramaLiberacoes: NewCronogramaLiberacoes = {
+                    id_pleito: item.id_pleito,
+                    ano: item.ano,
+                    indicador_liberacoes: item.indicador_liberacoes,
+                    liberacoes_aro: item.liberacoes_aro,
+                    liberacoes_demais: item.liberacoes_demais,
+                    liberacoes_operacoes_sfn: item.liberacoes_operacoes_sfn,
+                    liberacoes_total: item.liberacoes_total,
+                };
 
-            if (newCronogramaLiberacoes)
                 transformed.push(newCronogramaLiberacoes);
+            }
         }
 
         return transformed;
@@ -91,7 +101,7 @@ async function save(transformed: NewCronogramaLiberacoes[]) {
                     liberacoes_operacoes_sfn: sql`values(${Cronograma_Liberacoes.liberacoes_operacoes_sfn})`,
                     liberacoes_total: sql`values(${Cronograma_Liberacoes.liberacoes_total})`
                 }
-            })
+            });
     } catch (error: any) {
         log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }

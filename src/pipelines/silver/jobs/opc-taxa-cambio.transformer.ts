@@ -1,9 +1,9 @@
 import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
-import { rawDs1OpcTaxaCambio } from "../../../database/bronze_schema.js";
+import { rawDs1OpcTaxaCambio, rawDs1SadipemTtPvl } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
 import { Cambio } from "../../../database/silver_schema.js";
-import { sql } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 
 type RawTaxaCambio = typeof rawDs1OpcTaxaCambio.$inferSelect;
 type NewTaxaCambio = typeof Cambio.$inferInsert;
@@ -33,13 +33,21 @@ async function load(index: number): Promise<RawTaxaCambio[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawTaxaCambio[] = await bronzeDB
+        const queryResult = await bronzeDB
             .select()
             .from(rawDs1OpcTaxaCambio)
-            .offset(index * 1000)
+            // 1. INNER JOIN para filtrar id_pleito que não existe na tabela pai (evita erro de FK)
+            .innerJoin(
+                rawDs1SadipemTtPvl,
+                eq(rawDs1OpcTaxaCambio.id_pleito, rawDs1SadipemTtPvl.id_pleito)
+            )
+            // 2. Ordenação explícita para evitar registros pulados/repetidos durante a paginação
+            .orderBy(asc(rawDs1OpcTaxaCambio.id))
+            // 3. Offset dinâmico multiplicando pelo BATCH_SIZE correto
+            .offset(index * BATCH_SIZE)
             .limit(BATCH_SIZE);
 
-        return raw;
+        return queryResult.map(row => row.raw_ds1_opc_taxa_cambio);
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha no carregamento de dados brutos.`);
         return [];
@@ -58,16 +66,16 @@ async function transform(raw: RawTaxaCambio[]): Promise<NewTaxaCambio[]> {
             if (item.data_taxa_cambio)
                 dataTaxaCambio = parseStringToDate(item.data_taxa_cambio) ?? null;
 
-            if (parsedTaxaCambio) {
+            // Valida id_pleito e moeda (chaves obrigatórias) e o valor convertido
+            if (item.id_pleito && item.moeda && parsedTaxaCambio !== null && !isNaN(parsedTaxaCambio)) {
                 const newTaxaCambio: NewTaxaCambio = {
                     id_pleito: item.id_pleito,
                     data_taxa_cambio: dataTaxaCambio,
                     moeda: item.moeda,
                     taxa_cambio: parsedTaxaCambio,
-                }
+                };
 
-                if (newTaxaCambio)
-                    transformed.push(newTaxaCambio);
+                transformed.push(newTaxaCambio);
             }
         }
 

@@ -318,8 +318,12 @@ export const rawDs3CustomResultadoFiscal = mysqlTable('raw_ds3_custom_resultado_
 });
 
 export const rawDs3TemporaisCustomSeries = mysqlTable('raw_ds3_temporais_custom_series', {
-    codigo: varchar('codigo', { length: 255 }).primaryKey(),
-    nome: varchar('nome', { length: 255 }),
+    codigoSerie: varchar('codigoSerie', { length: 255 }).primaryKey(),
+    nomeSerie: varchar('nomeSerie', { length: 255 }),
+    codigoTema: varchar('codigoTema', { length: 255 }),
+    nomeTema: varchar('nomeTema', { length: 255 }),
+    codigoSubtema: varchar('codigoSubtema', { length: 255 }),
+    nomeSubtema: varchar('nomeSubtema', { length: 255 }),
 });
 
 export const rawDs4TtAnexosRelatorios = mysqlTable('raw_ds4_tt_anexos_relatorios', {

@@ -90,7 +90,7 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
         const params: EndpointParameter[] = await bronzeDB.select().from(endpointParameters).where(eq(endpointParameters.endpointId, endpoint.id));
         const requiredParams = params.filter(param => param.is_required);
 
-        let combinations: any[][] = [[]];
+        let combinationsIterable: Iterable<any[]> = [[]];
         let paramKeys: string[] = [];
 
         if (requiredParams.length > 0) {
@@ -111,16 +111,26 @@ async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: 
                 return;
             }
 
-            const cartesian = <T>(args: T[][]): T[][] =>
-                args.reduce<T[][]>((acc, curr) => acc.flatMap(d => curr.map(e => [...(Array.isArray(d) ? d : [d]), e])), [[]]);
-
             const paramValuesMatrix: any[][] = paramKeys.map(key => resolvedParams[key] ?? []);
             if (paramValuesMatrix.length === 0 || !paramValuesMatrix[0]) return;
 
-            combinations = paramValuesMatrix.length === 1 ? paramValuesMatrix[0].map(v => [v]) : cartesian(paramValuesMatrix);
+            // Função geradora local para não acumular arrays na RAM
+            function* cartesianGenerator(arrays: any[][], index = 0, current: any[] = []): Generator<any[]> {
+                if (index === arrays.length) {
+                    yield current;
+                    return;
+                }
+                for (const item of arrays[index]!) {
+                    yield* cartesianGenerator(arrays, index + 1, [...current, item]);
+                }
+            }
+
+            combinationsIterable = paramValuesMatrix.length === 1
+                ? paramValuesMatrix[0].map(v => [v])
+                : { [Symbol.iterator]: () => cartesianGenerator(paramValuesMatrix) };
         }
 
-        for (const combination of combinations) {
+        for (const combination of combinationsIterable) {
             let currentQueryParams: Record<string, any> = { offset: initialOffset ?? 0 };
             if (IS_SAMPLING_MODE) currentQueryParams.limit = 1;
 
@@ -221,10 +231,14 @@ async function PersistRawEndpointResponse(response: any, endpoint: Endpoint) {
             hasMore: responseData["hasMore"] ?? 0
         };
 
-        // 1. INSERÇÃO NA TABELA GENÉRICA MANTIDA
+        // Remover o (null, 2) do JSON.stringify para economizar MUITA memória RAM.
+        // Transformar em string de linha única (minified)
+        const minifiedJsonString = JSON.stringify(apiResponse.items);
+
+        // 1. INSERÇÃO NA TABELA GENÉRICA
         const [insertedRawEndpoint] = await bronzeDB.insert(rawEndpointResponse).values({
             endpointId: endpoint.id,
-            raw_items: JSON.stringify(apiResponse.items, null, 2),
+            raw_items: minifiedJsonString,
             count: apiResponse.count,
             hasMore: apiResponse.hasMore ? 1 : 0,
             limit: apiResponse.limit,
@@ -244,15 +258,17 @@ async function PersistRawEndpointResponse(response: any, endpoint: Endpoint) {
             if (newapiLinks.length > 0) await bronzeDB.insert(apiLinks).values(newapiLinks);
         }
 
-        // 2. NOVA LÓGICA: INSERÇÃO DIRETA NA TABELA ESPECÍFICA (TARGET TABLE)
+        // 2. ISERÇÃO DIRETA NA TABELA ESPECÍFICA (COM CHUNKING)
         if (endpoint.targetTable) {
-            // Recupera o schema da tabela com base no dicionário importado
             const targetSchema = (tablesMap as any)[endpoint.targetTable];
 
             if (targetSchema) {
-                // O Drizzle faz o bulk insert automaticamente com array de objetos
-                // Se o JSON tiver colunas a mais que o schema, o Drizzle as ignora com segurança
-                await bronzeDB.insert(targetSchema).values(apiResponse.items);
+                // Dividir o array em pedaços menores (chunks) para não estourar a memória do Drizzle
+                const CHUNK_SIZE = 1000; // Ajuste para 500 se o OOM persistir
+                for (let i = 0; i < apiResponse.items.length; i += CHUNK_SIZE) {
+                    const chunk = apiResponse.items.slice(i, i + CHUNK_SIZE);
+                    await bronzeDB.insert(targetSchema).values(chunk);
+                }
             } else {
                 logger.warn({ context, data: `Tabela: ${endpoint.targetTable}` }, `[WARN] Schema não encontrado no tablesMap.`);
             }

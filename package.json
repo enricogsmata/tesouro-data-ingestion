@@ -7,8 +7,12 @@
     "start": "node --max-old-space-size=8192 --import tsx src/run.ts",
     "cli": "node --max-old-space-size=8192 --import tsx src/run.cli.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "bronzeDB:push": "drizzle-kit push --config=drizzle.bronze.config.ts",
-    "silverDB:push": "drizzle-kit push --config=drizzle.silver.config.ts"
+    "bronzedb:push": "drizzle-kit push --config=drizzle.bronze.config.ts",
+    "silverdb:push": "drizzle-kit push --config=drizzle.silver.config.ts",
+    "bronzedb:generate": "drizzle-kit generate --config=drizzle.bronze.config.ts",
+    "silverdb:generate": "drizzle-kit generate --config=drizzle.silver.config.ts",
+    "bronzedb:migrate": "drizzle-kit migrate --config=drizzle.bronze.config.ts",
+    "silverdb:migrate": "drizzle-kit migrate --config=drizzle.silver.config.ts"
   },
   "keywords": [],
   "author": "",

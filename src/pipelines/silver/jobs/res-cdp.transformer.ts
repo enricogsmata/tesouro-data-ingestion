@@ -1,9 +1,9 @@
 import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
-import { rawDs1TtResCdp } from "../../../database/bronze_schema.js";
+import { rawDs1TtResCdp, rawDs1SadipemTtPvl } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { BATCH_SIZE, parseStringToDate } from "../utils.js";
 import { CDP } from "../../../database/silver_schema.js";
-import { sql } from "drizzle-orm";
+import { eq, asc, sql } from "drizzle-orm";
 
 type RawCDP = typeof rawDs1TtResCdp.$inferSelect;
 type NewCDP = typeof CDP.$inferInsert;
@@ -22,7 +22,7 @@ export async function cdpOrchestrator() {
             if (transformed.length > 0) {
                 await save(transformed);
             } else {
-                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Dados tratados inválidos!`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Lote sem dados tratados válidos.`);
             }
         }
     } catch (error: any) {
@@ -34,13 +34,21 @@ async function load(index: number): Promise<RawCDP[]> {
     const log = logger.forMethod('load');
 
     try {
-        const raw: RawCDP[] = await bronzeDB
+        const queryResult = await bronzeDB
             .select()
             .from(rawDs1TtResCdp)
-            .offset(index * 1000)
+            // 1. Filtra id_pleito que não existe no cadastro central
+            .innerJoin(
+                rawDs1SadipemTtPvl,
+                eq(rawDs1TtResCdp.id_pleito, rawDs1SadipemTtPvl.id_pleito)
+            )
+            // 2. Ordenação explícita para evitar registros reordenados durante a paginação
+            .orderBy(asc(rawDs1TtResCdp.id))
+            // 3. Offset dinâmico baseado no BATCH_SIZE real
+            .offset(index * BATCH_SIZE)
             .limit(BATCH_SIZE);
 
-        return raw;
+        return queryResult.map(row => row.raw_ds1_tt_res_cdp);
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha no carregamento de dados brutos.`);
         return [];
@@ -57,22 +65,28 @@ async function transform(raw: RawCDP[]): Promise<NewCDP[]> {
             let dataStatus: Date | null = null;
 
             if (item.data_base) {
-                item.data_base.trim();
-                if (item.data_base.length === 4) item.data_base = `01/01/${item.data_base}`
-                dataBase = parseStringToDate(item.data_base, 'dd/MM/yyyy') ?? null;
+                // Reatribuição correta da string tratada com trim()
+                let cleanDataBase = item.data_base.trim();
+                if (cleanDataBase.length === 4) cleanDataBase = `01/01/${cleanDataBase}`;
+                dataBase = parseStringToDate(cleanDataBase, 'dd/MM/yyyy') ?? null;
             }
-            if (item.data_status)
+
+            if (item.data_status) {
                 dataStatus = parseStringToDate(item.data_status, 'dd/MM/yyyy HH/mm/ss') ?? null;
-
-            const newCDP: NewCDP = {
-                data_base: dataBase,
-                data_status: dataStatus,
-                id_pleito: item.id_pleito,
-                situacao_ente: item.situacao_ente,
-                status: item.status,
             }
 
-            transformed.push(newCDP);
+            // Garante que as duas chaves primárias (id_pleito e data_base) são válidas
+            if (item.id_pleito && dataBase) {
+                const newCDP: NewCDP = {
+                    data_base: dataBase,
+                    data_status: dataStatus,
+                    id_pleito: item.id_pleito,
+                    situacao_ente: item.situacao_ente,
+                    status: item.status,
+                };
+
+                transformed.push(newCDP);
+            }
         }
 
         return transformed;
@@ -97,7 +111,7 @@ async function save(transformed: NewCDP[]) {
                     situacao_ente: sql`values(${CDP.situacao_ente})`,
                     status: sql`values(${CDP.status})`,
                 }
-            })
+            });
     } catch (error: any) {
         log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }

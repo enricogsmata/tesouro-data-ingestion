@@ -9,9 +9,11 @@ import { faixaEtariaTransformerOrchestrator } from "./faixa_etaria.transformer.j
 import { sexoTransformerOrchestrator } from "./sexo.transformer.js";
 import { Custo_Ativo } from "../../../database/silver_schema.js";
 import { rawDs2CustosTtPessoalAtivo } from "../../../database/bronze_schema.js";
+import { asc, sql } from "drizzle-orm";
 
 type RawCustoAtivo = typeof rawDs2CustosTtPessoalAtivo.$inferSelect;
 type NewCustoAtivo = typeof Custo_Ativo.$inferInsert;
+
 const logger = createLogger(import.meta.url);
 
 export async function custoAtivoTransformerOrchestrator() {
@@ -22,12 +24,13 @@ export async function custoAtivoTransformerOrchestrator() {
             const raw: RawCustoAtivo[] = await load(index);
             if (raw.length === 0) return;
 
-            const transformed: NewCustoAtivo[] | null = await transform(raw);
+            const transformed: NewCustoAtivo[] = await transform(raw);
 
-            if (transformed && transformed.length > 0)
-                await save(transformed); 
-            else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+            if (transformed.length > 0) {
+                await save(transformed);
+            } else {
+                log.error({ data: JSON.stringify(transformed, null, 4) }, `Lote sem dados tratados válidos.`);
+            }
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -38,21 +41,28 @@ async function load(index: number): Promise<RawCustoAtivo[]> {
     const log = logger.forMethod('load');
 
     try {
-        const nextOffset = index * BATCH_SIZE;
-        const response = await bronzeDB.select().from(rawDs2CustosTtPessoalAtivo).offset(nextOffset).limit(BATCH_SIZE) as RawCustoAtivo[];
-        return response;
+        const raw: RawCustoAtivo[] = await bronzeDB
+            .select()
+            .from(rawDs2CustosTtPessoalAtivo)
+            // 1. Ordenação explícita para evitar instabilidade na paginação
+            .orderBy(asc(rawDs2CustosTtPessoalAtivo.id))
+            .offset(index * BATCH_SIZE)
+            .limit(BATCH_SIZE);
+
+        return raw;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
         return [];
     }
 }
 
-async function transform(rawItems: RawCustoAtivo[]): Promise<NewCustoAtivo[] | null> {
+async function transform(rawItems: RawCustoAtivo[]): Promise<NewCustoAtivo[]> {
     const log = logger.forMethod('transform');
 
     try {
         let transformed: NewCustoAtivo[] = [];
         for (const raw of rawItems) {
+            // Execução sequencial das dependências/tabelas pai
             await naturezaJuridicaTransformerOrchestrator(raw as any);
             await areaAtuacaoTransformerOrchestrator(raw);
             await escolaridadeTransformerOrchestrator(raw);
@@ -61,6 +71,7 @@ async function transform(rawItems: RawCustoAtivo[]): Promise<NewCustoAtivo[] | n
             
             const organizacoes = await organizacaoTransformerOrchestrator(raw);
 
+            // Valida a integridade das Foreign Keys e campos notNull()
             if (
                 organizacoes &&
                 organizacoes.organizacao_n0 !== null &&
@@ -84,14 +95,14 @@ async function transform(rawItems: RawCustoAtivo[]): Promise<NewCustoAtivo[] | n
                     co_organizacao_n4: organizacoes.organizacao_n4,
                     co_organizacao_n5: organizacoes.organizacao_n5,
                     co_organizacao_n6: organizacoes.organizacao_n6,
-                    an_lanc: raw.an_lanc.toString(),
-                    me_lanc: raw.me_lanc.toString(),
+                    an_lanc: String(raw.an_lanc),
+                    me_lanc: String(raw.me_lanc),
                     in_escolaridade: Number(raw.in_escolaridade),
                     in_faixa_etaria: Number(raw.in_faixa_etaria),
-                    in_sexo: raw.in_sexo,
+                    in_sexo: String(raw.in_sexo),
                     va_custo_de_pessoal: raw.va_custo_de_pessoal ?? null,
                     in_forca_trabalho: raw.in_forca_trabalho ?? null,
-                }
+                };
                 
                 transformed.push(newCustoAtivo);
             }
@@ -100,7 +111,7 @@ async function transform(rawItems: RawCustoAtivo[]): Promise<NewCustoAtivo[] | n
         return transformed;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar objeto.`);
-        return null;
+        return [];
     }
 }
 
@@ -110,9 +121,26 @@ async function save(transformed: NewCustoAtivo[]) {
     try {
         await silverDB
             .insert(Custo_Ativo)
-            .ignore()
             .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    co_organizacao_n0: sql`values(${Custo_Ativo.co_organizacao_n0})`,
+                    co_organizacao_n1: sql`values(${Custo_Ativo.co_organizacao_n1})`,
+                    co_organizacao_n2: sql`values(${Custo_Ativo.co_organizacao_n2})`,
+                    co_organizacao_n3: sql`values(${Custo_Ativo.co_organizacao_n3})`,
+                    co_organizacao_n4: sql`values(${Custo_Ativo.co_organizacao_n4})`,
+                    co_organizacao_n5: sql`values(${Custo_Ativo.co_organizacao_n5})`,
+                    co_organizacao_n6: sql`values(${Custo_Ativo.co_organizacao_n6})`,
+                    an_lanc: sql`values(${Custo_Ativo.an_lanc})`,
+                    me_lanc: sql`values(${Custo_Ativo.me_lanc})`,
+                    in_escolaridade: sql`values(${Custo_Ativo.in_escolaridade})`,
+                    in_faixa_etaria: sql`values(${Custo_Ativo.in_faixa_etaria})`,
+                    in_sexo: sql`values(${Custo_Ativo.in_sexo})`,
+                    va_custo_de_pessoal: sql`values(${Custo_Ativo.va_custo_de_pessoal})`,
+                    in_forca_trabalho: sql`values(${Custo_Ativo.in_forca_trabalho})`,
+                }
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

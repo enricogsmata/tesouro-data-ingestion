@@ -2,6 +2,7 @@ import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
 import { rawDs4SiconfiTtRreo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { Instituição } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewInstituicao = typeof Instituição.$inferInsert;
@@ -22,7 +23,7 @@ export async function instituicaoTransformerOrchestrator(raw: RawRreo) {
 function transform(item: any): NewInstituicao | null {
     const log = logger.forMethod('transform');
     try {
-        if (!item.instituicao || !item.cod_ibge) return null;
+        if (item.instituicao == null || item.cod_ibge == null) return null;
         return {
             instituicao: item.instituicao,
             co_poder: item.co_poder ?? null,
@@ -37,8 +38,15 @@ function transform(item: any): NewInstituicao | null {
 async function save(transformed: NewInstituicao) {
     const log = logger.forMethod('save');
     try {
-        await silverDB.insert(Instituição).ignore().values(transformed);
+        await silverDB
+            .insert(Instituição)
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    co_poder: sql`VALUES(co_poder)`,
+                },
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

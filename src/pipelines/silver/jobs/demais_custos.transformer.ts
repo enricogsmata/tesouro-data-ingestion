@@ -9,9 +9,11 @@ import { esferaOrcamentariaTransformerOrchestrator } from "./esfera_orcamentaria
 import { resultadoPrimarioTransformerOrchestrator } from "./resultado_primario.transformer.js";
 import { naturezaJuridicaTransformerOrchestrator } from "./natureza-juridica.transformer.js";
 import { Demais_Custos } from "../../../database/silver_schema.js";
+import { asc, sql } from "drizzle-orm";
 
 type RawDemaisCustos = typeof rawDs2CustosTtDemais.$inferSelect;
 type NewDemaisCustos = typeof Demais_Custos.$inferInsert;
+
 const logger = createLogger(import.meta.url);
 
 export async function demaisCustosTransformerOrchestrator() {
@@ -22,12 +24,13 @@ export async function demaisCustosTransformerOrchestrator() {
             const raw: RawDemaisCustos[] = await load(index);
             if (raw.length === 0) return;
 
-            const transformed: NewDemaisCustos[] | null = await transform(raw);
+            const transformed: NewDemaisCustos[] = await transform(raw);
 
-            if (transformed && transformed.length > 0)
-                await save(transformed); 
-            else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+            if (transformed.length > 0) {
+                await save(transformed);
+            } else {
+                log.error({ data: JSON.stringify(transformed, null, 4) }, `Lote sem dados tratados válidos.`);
+            }
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -38,25 +41,31 @@ async function load(index: number): Promise<RawDemaisCustos[]> {
     const log = logger.forMethod('load');
 
     try {
-        const nextOffset = index * BATCH_SIZE;
-        const response = await bronzeDB.select().from(rawDs2CustosTtDemais).offset(nextOffset).limit(BATCH_SIZE) as RawDemaisCustos[];
-        return response;
+        const raw: RawDemaisCustos[] = await bronzeDB
+            .select()
+            .from(rawDs2CustosTtDemais)
+            // 1. Ordenação explícita para garantir estabilidade da paginação
+            .orderBy(asc(rawDs2CustosTtDemais.id))
+            .offset(index * BATCH_SIZE)
+            .limit(BATCH_SIZE);
+
+        return raw;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
         return [];
     }
 }
 
-async function transform(rawItems: RawDemaisCustos[]): Promise<NewDemaisCustos[] | null> {
+async function transform(rawItems: RawDemaisCustos[]): Promise<NewDemaisCustos[]> {
     const log = logger.forMethod('transform');
 
     try {
         let transformed: NewDemaisCustos[] = [];
         for (const raw of rawItems) {
+            // Execução sequencial dos orquestradores de tabelas de domínio/dependências
             await situacaoContabilTransformerOrchestrator(raw);
             await naturezaDespesaDetalhadaTransformerOrchestrator(raw);
 
-            // Adaptadores para as funções orquestradoras existentes
             await esferaOrcamentariaTransformerOrchestrator({
                 co_esfera_orcamentaria: raw.id_esfera_orcamentaria,
                 ds_esfera_orcamentaria: raw.no_esfera_orcamentaria
@@ -72,7 +81,7 @@ async function transform(rawItems: RawDemaisCustos[]): Promise<NewDemaisCustos[]
                 ds_natureza_juridica: raw.ds_natureza_juridica_siorg
             } as any);
 
-            // Mapeando a hierarquia siorg para o orquestrador de organização
+            // Mapeando a hierarquia SIORG para o orquestrador de organização
             await organizacaoTransformerOrchestrator({
                 co_natureza_juridica: raw.id_natureza_juridica_siorg,
                 co_organizacao_n4: raw.co_siorg_n04,
@@ -85,6 +94,7 @@ async function transform(rawItems: RawDemaisCustos[]): Promise<NewDemaisCustos[]
                 ds_organizacao_n7: raw.ds_siorg_n07,
             } as any);
 
+            // Validação das FKs obrigatórias para inserção no Silver
             if (
                 raw.id !== null &&
                 raw.co_siorg_n05 !== null &&
@@ -119,7 +129,7 @@ async function transform(rawItems: RawDemaisCustos[]): Promise<NewDemaisCustos[]
         return transformed;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar objeto.`);
-        return null;
+        return [];
     }
 }
 
@@ -129,9 +139,25 @@ async function save(transformed: NewDemaisCustos[]) {
     try {
         await silverDB
             .insert(Demais_Custos)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    co_siorg_n05: sql`values(${Demais_Custos.co_siorg_n05})`,
+                    co_siorg_n06: sql`values(${Demais_Custos.co_siorg_n06})`,
+                    co_siorg_n07: sql`values(${Demais_Custos.co_siorg_n07})`,
+                    me_referencia: sql`values(${Demais_Custos.me_referencia})`,
+                    an_referencia: sql`values(${Demais_Custos.an_referencia})`,
+                    me_emissao: sql`values(${Demais_Custos.me_emissao})`,
+                    an_emissao: sql`values(${Demais_Custos.an_emissao})`,
+                    sg_mes_completo: sql`values(${Demais_Custos.sg_mes_completo})`,
+                    co_situacao_icc: sql`values(${Demais_Custos.co_situacao_icc})`,
+                    co_natureza_despesa_deta: sql`values(${Demais_Custos.co_natureza_despesa_deta})`,
+                    co_esfera_orcamentaria: sql`values(${Demais_Custos.co_esfera_orcamentaria})`,
+                    co_resultado_eof: sql`values(${Demais_Custos.co_resultado_eof})`,
+                    va_custo: sql`values(${Demais_Custos.va_custo})`,
+                }
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

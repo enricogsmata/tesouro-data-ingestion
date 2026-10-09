@@ -2,6 +2,7 @@ import { createLogger } from "../../../services/logs.js";
 import type { RawDepreciacao } from "./depreciacao.transformer.js";
 import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
 import { Natureza_Juridica } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawNaturezaJuridica = typeof Natureza_Juridica.$inferInsert;
 
@@ -13,27 +14,29 @@ export async function naturezaJuridicaTransformerOrchestrator(raw: RawDepreciaca
         const transformed: RawNaturezaJuridica | null = transform(raw);
 
         if (!transformed) {
-            log.error({ data: JSON.stringify(raw, null, 4) }, `Dados transformados inválidos!`);
-            return;
+            return; // Se não houver código de natureza jurídica, encerra silenciosamente
         }
 
         await save(transformed);
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha no orquestrador.`);
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha no orquestrador de natureza jurídica.`);
     }
 }
 
 function transform(item: RawDepreciacao): RawNaturezaJuridica | null {
     const log = logger.forMethod('transform');
     try {
-        const rawwNaturezaJuridica: RawNaturezaJuridica = {
-            co_natureza_juridica: item.co_natureza_juridica!,
-            ds_natureza_juridica: item.ds_natureza_juridica,
+        // Validação de existência do código para evitar o operador '!'
+        if (!item.co_natureza_juridica && item.co_natureza_juridica !== 0) {
+            return null;
         }
 
-        return rawwNaturezaJuridica;
+        return {
+            co_natureza_juridica: Number(item.co_natureza_juridica),
+            ds_natureza_juridica: item.ds_natureza_juridica ? String(item.ds_natureza_juridica).trim() : null,
+        };
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar dados brutos.`);
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar dados de natureza jurídica.`);
         return null;
     }
 }
@@ -43,9 +46,14 @@ async function save(transformed: RawNaturezaJuridica) {
     try {
         await silverDB
             .insert(Natureza_Juridica)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    ds_natureza_juridica: sql`COALESCE(values(${Natureza_Juridica.ds_natureza_juridica}), ${Natureza_Juridica.ds_natureza_juridica})`,
+                }
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência de natureza jurídica.`);
+        throw error;
     }
 }

@@ -1,6 +1,7 @@
 import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
 import { Conta_Contabil } from "../../../database/silver_schema.js";
 import { createLogger } from "../../../services/logs.js";
+import { sql } from "drizzle-orm";
 
 type RawContaContabil = typeof Conta_Contabil.$inferInsert;
 
@@ -27,20 +28,26 @@ export async function contaContabilTransformerOrchestrator(raw: any): Promise<nu
 function transform(raw: any): RawContaContabil | null {
     const log = logger.forMethod('transform');
     try {
-        if (raw.id_conta_contabil) {
-            return {
-                cod_conta_contabil: Number(raw.id_conta_contabil),
-                desc_conta_contabil: raw.no_conta_contabil ?? null,
-                classe_conta: null,
-            };
-        } else if (raw.conta_contabil) {
-            return {
-                cod_conta_contabil: Number(raw.conta_contabil),
-                desc_conta_contabil: null,
-                classe_conta: raw.classe_conta ? Number(raw.classe_conta) : null,
-            };
+        // Extrai o código da conta testando se o valor existe (independente de ser 0 ou string)
+        const rawCod = raw.id_conta_contabil ?? raw.conta_contabil ?? raw.cod_conta_contabil;
+
+        if (rawCod === undefined || rawCod === null || rawCod === '') {
+            return null;
         }
-        return null;
+
+        const cod = Number(rawCod);
+        if (isNaN(cod)) return null;
+
+        // Recupera a descrição e classe de qualquer propriedade enviada no payload
+        const desc = raw.no_conta_contabil ?? raw.desc_conta_contabil ?? null;
+        const rawClasse = raw.classe_conta !== undefined && raw.classe_conta !== null ? Number(raw.classe_conta) : null;
+        const classe = rawClasse !== null && !isNaN(rawClasse) ? rawClasse : null;
+
+        return {
+            cod_conta_contabil: cod,
+            desc_conta_contabil: desc ? String(desc).trim() : null,
+            classe_conta: classe,
+        };
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar dados brutos.`);
         return null;
@@ -52,9 +59,15 @@ async function save(transformed: RawContaContabil) {
     try {
         await silverDB
             .insert(Conta_Contabil)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    // Atualiza a descrição/classe se o novo valor não for NULL
+                    desc_conta_contabil: sql`COALESCE(values(${Conta_Contabil.desc_conta_contabil}), ${Conta_Contabil.desc_conta_contabil})`,
+                    classe_conta: sql`COALESCE(values(${Conta_Contabil.classe_conta}), ${Conta_Contabil.classe_conta})`,
+                }
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

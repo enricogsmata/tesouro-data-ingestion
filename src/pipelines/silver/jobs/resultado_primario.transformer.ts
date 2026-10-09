@@ -2,6 +2,7 @@ import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
 import { rawDs2CustosTtTransferencias } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { Resultado_Primario } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawTransferencia = typeof rawDs2CustosTtTransferencias.$inferSelect;
 type NewResultadoPrimario = typeof Resultado_Primario.$inferInsert;
@@ -17,21 +18,26 @@ export async function resultadoPrimarioTransformerOrchestrator(raw: RawTransfere
 
         await save(transformed);
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha no orquestrador.`);
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha no orquestrador de resultado primário.`);
     }
 }
 
 function transform(item: RawTransferencia): NewResultadoPrimario | null {
     const log = logger.forMethod('transform');
     try {
-        if (!item.co_resultado_eof) return null;
+        if (item.co_resultado_eof === null || item.co_resultado_eof === undefined) {
+            return null;
+        }
+
+        const cod = Number(item.co_resultado_eof);
+        if (isNaN(cod)) return null;
 
         return {
-            co_resultado_eof: Number(item.co_resultado_eof),
-            ds_resultado_eof: item.ds_resultado_eof,
+            co_resultado_eof: cod,
+            ds_resultado_eof: item.ds_resultado_eof ? String(item.ds_resultado_eof).trim() : null,
         };
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar dados brutos.`);
+        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao transformar dados de resultado primário.`);
         return null;
     }
 }
@@ -41,9 +47,13 @@ async function save(transformed: NewResultadoPrimario) {
     try {
         await silverDB
             .insert(Resultado_Primario)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    ds_resultado_eof: sql`COALESCE(values(${Resultado_Primario.ds_resultado_eof}), ${Resultado_Primario.ds_resultado_eof})`,
+                }
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência de resultado primário.`);
     }
 }

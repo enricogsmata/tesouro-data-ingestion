@@ -8,13 +8,13 @@ import { char, date, float, int, mysqlTable, serial, timestamp, text, varchar, b
 // > SCHEMAS
 // ----------
 
-export const Credor = mysqlTable('Credor', {
+export const Credor = mysqlTable('credor', {
     id_credor: int('id_credor').primaryKey().autoincrement(),
     credor: varchar('credor', { length: 255 }).unique(),
     tipo: varchar('tipo', { length: 255 }),
 });
 
-export const Ente = mysqlTable('Ente', {
+export const Ente = mysqlTable('ente', {
     cod_ibge: int('cod_ibge').primaryKey(),
     ente: varchar('ente', { length: 255 }),
     capital: int('capital'),
@@ -26,7 +26,7 @@ export const Ente = mysqlTable('Ente', {
     enteUfUniqueIdx: uniqueIndex('ente_uf_unique_idx').on(table.ente, table.uf),
 }));
 
-export const PVL = mysqlTable('PVL', {
+export const PVL = mysqlTable('pvl', {
     id_pleito: int('id_pleito').primaryKey(),
     cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge), // Corrigido para INT
     num_pvl: varchar('num_pvl', { length: 255 }).unique(),
@@ -43,7 +43,7 @@ export const PVL = mysqlTable('PVL', {
     data_status: date('data_status', { mode: 'date' }),
 });
 
-export const Operacoes_Nao_Contratadas = mysqlTable('Operacoes_Nao_Contratadas', {
+export const Operacoes_Nao_Contratadas = mysqlTable('operacoes_nao_contratadas', {
     id_pleito: int('id_pleito').notNull(),
     id_pleito_nao_contratado: int('id_pleito_nao_contratado').notNull(),
 }, (table) => ({
@@ -60,7 +60,7 @@ export const Operacoes_Nao_Contratadas = mysqlTable('Operacoes_Nao_Contratadas',
     pk: primaryKey({ columns: [table.id_pleito, table.id_pleito_nao_contratado] }),
 }));
 
-export const Cambio = mysqlTable('Cambio', {
+export const Cambio = mysqlTable('cambio', {
     id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     moeda: varchar('moeda', { length: 255 }),
     taxa_cambio: double('taxa_cambio'),
@@ -69,7 +69,7 @@ export const Cambio = mysqlTable('Cambio', {
     pk: primaryKey({ columns: [table.id_pleito, table.moeda] }),
 }));
 
-export const CDP = mysqlTable('CDP', {
+export const CDP = mysqlTable('cdp', {
     id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     data_base: date('data_base'),
     status: varchar('status', { length: 255 }),
@@ -79,7 +79,7 @@ export const CDP = mysqlTable('CDP', {
     pk: primaryKey({ columns: [table.id_pleito, table.data_base] }),
 }));
 
-export const Resumo_Geral = mysqlTable('Resumo_Geral', {
+export const Resumo_Geral = mysqlTable('resumo_geral', {
     id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
     sn_pvl_tramitacao_deferido: char('sn_pvl_tramitacao_deferido', { length: 1 }),
@@ -92,7 +92,7 @@ export const Resumo_Geral = mysqlTable('Resumo_Geral', {
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
-export const Resumo_Cronograma_Pagamentos = mysqlTable('Resumo_Cronograma_Pagamentos', {
+export const Resumo_Cronograma_Pagamentos = mysqlTable('resumo_cronograma_pagamentos', {
     id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
     operacao_pleiteada: double('operacao_pleiteada'),
@@ -101,7 +101,7 @@ export const Resumo_Cronograma_Pagamentos = mysqlTable('Resumo_Cronograma_Pagame
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
-export const Cronograma_Pagamentos = mysqlTable('Cronograma_Pagamentos', {
+export const Cronograma_Pagamentos = mysqlTable('cronograma_pagamentos', {
     id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
     indicador_liberacoes: char('indicador_liberacoes', { length: 1 }),
@@ -116,7 +116,7 @@ export const Cronograma_Pagamentos = mysqlTable('Cronograma_Pagamentos', {
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
-export const Cronograma_Liberacoes = mysqlTable('Cronograma_Liberacoes', {
+export const Cronograma_Liberacoes = mysqlTable('cronograma_liberacoes', {
     id_pleito: int('id_pleito').references(() => PVL.id_pleito),
     ano: varchar('ano', { length: 255 }),
     indicador_liberacoes: char('indicador_liberacoes', { length: 1 }),
@@ -128,23 +128,23 @@ export const Cronograma_Liberacoes = mysqlTable('Cronograma_Liberacoes', {
     pk: primaryKey({ columns: [table.id_pleito, table.ano] }),
 }));
 
-export const Conta_Contabil = mysqlTable('Conta_Contabil', {
+export const Conta_Contabil = mysqlTable('conta_contabil', {
     cod_conta_contabil: int('cod_conta_contabil').primaryKey(),
     desc_conta_contabil: varchar('desc_conta_contabil', { length: 255 }),
     classe_conta: int('classe_conta'),
 });
 
-export const Natureza_Juridica = mysqlTable('Natureza_Juridica', {
+export const Natureza_Juridica = mysqlTable('natureza_juridica', {
     co_natureza_juridica: int('co_natureza_juridica').primaryKey(),
     ds_natureza_juridica: varchar('ds_natureza_juridica', { length: 255 }),
 });
 
-export const Area_Atuacao = mysqlTable('Area_Atuacao', {
+export const Area_Atuacao = mysqlTable('area_atuacao', {
     in_area_atuacao: int('in_area_atuacao').primaryKey(),
     ds_area_atuacao: varchar('ds_area_atuacao', { length: 255 }),
 });
 
-export const Organizacao = mysqlTable('Organizacao', {
+export const Organizacao = mysqlTable('organizacao', {
     co_organizacao: int('co_organizacao').primaryKey(),
     ds_organizacao: varchar('ds_organizacao', { length: 255 }),
     co_natureza_juridica: int('co_natureza_juridica'),
@@ -169,14 +169,14 @@ export const Organizacao = mysqlTable('Organizacao', {
     }),
 }));
 
-export const Custo_Inativo = mysqlTable('Custo_Inativo', {
+export const Custo_Inativo = mysqlTable('custo_inativo', {
     id_custo_inativo: int('id_custo_inativo').autoincrement().primaryKey(),
     co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
     co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
     co_organizacao_n2: int('co_organizacao_n2').notNull().references(() => Organizacao.co_organizacao),
     co_organizacao_n3: int('co_organizacao_n3').notNull().references(() => Organizacao.co_organizacao),
     an_lanc: char('an_lanc', { length: 4 }),
-    me_lanc: char('me_lanc', { length: 1 }),
+    me_lanc: char('me_lanc', { length: 2 }),
     va_custo_pessoal_inativo: double('va_custo_pessoal_inativo'),
 }, (table) => ({
     custoInativoUniqueIdx: uniqueIndex('custo_inativo_unique_idx').on(
@@ -189,14 +189,14 @@ export const Custo_Inativo = mysqlTable('Custo_Inativo', {
     ),
 }));
 
-export const Custo_Pensionista = mysqlTable('Custo_Pensionista', {
+export const Custo_Pensionista = mysqlTable('custo_pensionista', {
     id_custo_pensionistas: int('id_custo_pensionistas').autoincrement().primaryKey(),
     co_organizacao_n0: int('co_organizacao_n0').notNull(),
     co_organizacao_n1: int('co_organizacao_n1').notNull(),
     co_organizacao_n2: int('co_organizacao_n2').notNull(),
     co_organizacao_n3: int('co_organizacao_n3').notNull(),
     an_lanc: char('an_lanc', { length: 4 }),
-    me_lanc: char('me_lanc', { length: 1 }),
+    me_lanc: char('me_lanc', { length: 2 }),
     va_custo_pensionistas: double('va_custo_pensionistas'),
 }, (table) => ({
     fk_co_organizacao_n0: foreignKey({
@@ -229,7 +229,7 @@ export const Custo_Pensionista = mysqlTable('Custo_Pensionista', {
     ),
 }));
 
-export const Custo_Depreciacao = mysqlTable('Custo_Depreciacao', {
+export const Custo_Depreciacao = mysqlTable('custo_depreciacao', {
     id_depreciacao: int('id_depreciacao').autoincrement().primaryKey(),
     co_organizacao_n0: int('co_organizacao_n0').notNull(),
     co_organizacao_n1: int('co_organizacao_n1').notNull(),
@@ -276,22 +276,22 @@ export const Custo_Depreciacao = mysqlTable('Custo_Depreciacao', {
     ),
 }));
 
-export const Modalidade_Aplicacao = mysqlTable('Modalidade_Aplicacao', {
+export const Modalidade_Aplicacao = mysqlTable('modalidade_aplicacao', {
     co_modalidade_aplicacao: int('co_modalidade_aplicacao').primaryKey(),
     ds_modalidade_aplicacao: varchar('ds_modalidade_aplicacao', { length: 255 }),
 });
 
-export const Esfera_Orcamentaria = mysqlTable('Esfera_Orcamentaria', {
+export const Esfera_Orcamentaria = mysqlTable('esfera_orcamentaria', {
     co_esfera_orcamentaria: int('co_esfera_orcamentaria').primaryKey(),
     ds_esfera_orcamentaria: varchar('ds_esfera_orcamentaria', { length: 255 }),
 });
 
-export const Resultado_Primario = mysqlTable('Resultado_Primario', {
+export const Resultado_Primario = mysqlTable('resultado_primario', {
     co_resultado_eof: int('co_resultado_eof').primaryKey(),
     ds_resultado_eof: varchar('ds_resultado_eof', { length: 255 }),
 });
 
-export const Transferencia = mysqlTable('Transferencia', {
+export const Transferencia = mysqlTable('transferencia', {
     id_transferencia: int('id_transferencia').autoincrement().primaryKey(),
     co_organizacao_n0: int('co_organizacao_n0').notNull(),
     co_organizacao_n1: int('co_organizacao_n1').notNull(),
@@ -348,21 +348,21 @@ export const Transferencia = mysqlTable('Transferencia', {
     ),
 }));
 
-export const Escolaridade = mysqlTable('Escolaridade', {
+export const Escolaridade = mysqlTable('escolaridade', {
     in_escolaridade: int('in_escolaridade').primaryKey(),
     ds_escolaridade: varchar('ds_escolaridade', { length: 255 }),
 });
 
-export const Faixa_Etaria = mysqlTable('Faixa_Etaria', {
+export const Faixa_Etaria = mysqlTable('faixa_etaria', {
     in_faixa_etaria: int('in_faixa_etaria').primaryKey(),
     ds_faixa_etaria: varchar('ds_faixa_etaria', { length: 255 }),
 });
 
-export const Sexo = mysqlTable('Sexo', {
+export const Sexo = mysqlTable('sexo', {
     in_sexo: char('in_sexo', { length: 1 }).primaryKey(),
 });
 
-export const Custo_Ativo = mysqlTable('Custo_Ativo', {
+export const Custo_Ativo = mysqlTable('custo_ativo', {
     cod_custo_ativo: int('cod_custo_ativo').autoincrement().primaryKey(),
     co_organizacao_n0: int('co_organizacao_n0').notNull().references(() => Organizacao.co_organizacao),
     co_organizacao_n1: int('co_organizacao_n1').notNull().references(() => Organizacao.co_organizacao),
@@ -395,19 +395,19 @@ export const Custo_Ativo = mysqlTable('Custo_Ativo', {
     ),
 }));
 
-export const Situacao_Contabil_Lancamento = mysqlTable('Situacao_Contabil_Lancamento', {
+export const Situacao_Contabil_Lancamento = mysqlTable('situacao_contabil_lancamento', {
     co_situacao_icc: varchar('co_situacao_icc', { length: 255 }).primaryKey(),
     no_situacao_icc: varchar('no_situacao_icc', { length: 255 }),
 });
 
-export const Natureza_Despesa_Detalhada = mysqlTable('Natureza_Despesa_Detalhada', {
-    co_natureza_despesa_deta: char('co_natureza_despesa_deta', { length: 8 }).primaryKey(),
+export const Natureza_Despesa_Detalhada = mysqlTable('natureza_despesa_detalhada', {
+    co_natureza_despesa_deta: varchar('co_natureza_despesa_deta', { length: 10 }).primaryKey(),
     no_natureza_despesa_deta: varchar('no_natureza_despesa_deta', { length: 255 }),
-    id_categoria_economica_nade: char('id_categoria_economica_nade', { length: 1 }),
-    id_grupo_despesa_nade: char('id_grupo_despesa_nade', { length: 1 }),
+    id_categoria_economica_nade: varchar('id_categoria_economica_nade', { length: 10 }),
+    id_grupo_despesa_nade: varchar('id_grupo_despesa_nade', { length: 10 }),
     id_moap_nade: int('id_moap_nade').notNull(),
-    id_elemento_despesa_nade: char('id_elemento_despesa_nade', { length: 2 }),
-    id_subitem_nade: char('id_subitem_nade', { length: 2 }),
+    id_elemento_despesa_nade: varchar('id_elemento_despesa_nade', { length: 10 }),
+    id_subitem_nade: varchar('id_subitem_nade', { length: 10 }),
 }, (table) => ({
     fk_id_moap_nade: foreignKey({
         name: 'nat_desp_moap_fk',
@@ -416,7 +416,7 @@ export const Natureza_Despesa_Detalhada = mysqlTable('Natureza_Despesa_Detalhada
     }),
 }));
 
-export const Demais_Custos = mysqlTable('Demais_Custos', {
+export const Demais_Custos = mysqlTable('demais_custos', {
     id_demais_custos: int('id_demais_custos').primaryKey(),
     co_siorg_n05: int('co_siorg_n05').notNull(),
     co_siorg_n06: int('co_siorg_n06').notNull(),
@@ -483,7 +483,7 @@ export const Demais_Custos = mysqlTable('Demais_Custos', {
     ),
 }));
 
-export const Instituição = mysqlTable('Instituição', {
+export const Instituição = mysqlTable('instituição', {
     id: serial('id').primaryKey(),
     instituicao: varchar('instituicao', { length: 255 }).notNull(),
     co_poder: char('co_poder', { length: 1 }),
@@ -492,7 +492,7 @@ export const Instituição = mysqlTable('Instituição', {
     instUniqueIdx: uniqueIndex('inst_nome_idx').on(table.instituicao), // Adicionado UNIQUE para permitir FK por nome
 }));
 
-export const Populacao_Anual_Ente = mysqlTable('Populacao_Anual_Ente', {
+export const Populacao_Anual_Ente = mysqlTable('populacao_anual_ente', {
     cod_ibge: int('cod_ibge').references(() => Ente.cod_ibge),
     ano_exercicio: int('ano_exercicio'),
     populacao: int('populacao'),
@@ -500,7 +500,7 @@ export const Populacao_Anual_Ente = mysqlTable('Populacao_Anual_Ente', {
     pk: primaryKey({ columns: [table.cod_ibge, table.ano_exercicio] }),
 }));
 
-export const Extrato_Entregas = mysqlTable('Extrato_Entregas', {
+export const Extrato_Entregas = mysqlTable('extrato_entregas', {
     id: serial('id').primaryKey(),
     exercicio: int('exercicio'),
     cod_ibge: int('cod_ibge'),
@@ -510,7 +510,7 @@ export const Extrato_Entregas = mysqlTable('Extrato_Entregas', {
     periodicidade: char('periodicidade', { length: 1 }),
     status_relatorio: char('status_relatorio', { length: 2 }),
     data_status: datetime('data_status'),
-    forma_envio: char('forma_envio', { length: 1 }),
+    forma_envio: varchar('forma_envio', { length: 10 }),
     tipo_relatorio: char('tipo_relatorio', { length: 1 }),
 }, (table) => ({
     popFk: foreignKey({
@@ -520,7 +520,7 @@ export const Extrato_Entregas = mysqlTable('Extrato_Entregas', {
     }),
 }));
 
-export const Anexo = mysqlTable('Anexo', {
+export const Anexo = mysqlTable('anexo', {
     id_anexo: int('id_anexo').primaryKey().autoincrement(),
     anexo: varchar('anexo', { length: 255 }),
     demonstrativo: varchar('demonstrativo', { length: 255 }),
@@ -533,23 +533,23 @@ export const Anexo = mysqlTable('Anexo', {
     ),
 }));
 
-export const Rotulo = mysqlTable('Rotulo', {
+export const Rotulo = mysqlTable('rotulo', {
     rotulo: varchar('rotulo', { length: 255 }).primaryKey(),
     id_anexo: int('id_anexo').notNull().references(() => Anexo.id_anexo),
 });
 
-export const Coluna = mysqlTable('Coluna', {
+export const Coluna = mysqlTable('coluna', {
     coluna: varchar('coluna', { length: 255 }).primaryKey(),
     rotulo: varchar('rotulo', { length: 255 }).notNull().references(() => Rotulo.rotulo),
 });
 
-export const Conta = mysqlTable('Conta', {
+export const Conta = mysqlTable('conta', {
     cod_conta: varchar('cod_conta', { length: 255 }).primaryKey(),
     conta: varchar('conta', { length: 255 }),
     rotulo: varchar('rotulo', { length: 255 }).notNull().references(() => Rotulo.rotulo),
 });
 
-export const RREO_ou_RGF = mysqlTable('RREO_ou_RGF', {
+export const RREO_ou_RGF = mysqlTable('rreo_ou_rgf', {
     id: serial('id').primaryKey(),
     exercicio: int('exercicio').notNull(),
     periodo: int('periodo'),
@@ -567,7 +567,7 @@ export const RREO_ou_RGF = mysqlTable('RREO_ou_RGF', {
     }),
 }));
 
-export const DCA = mysqlTable('DCA', {
+export const DCA = mysqlTable('dca', {
     id: serial('id').primaryKey(),
     exercicio: int('exercicio').notNull(),
     instituicao: varchar('instituicao', { length: 255 }).notNull().references(() => Instituição.instituicao),
@@ -583,7 +583,7 @@ export const DCA = mysqlTable('DCA', {
     }),
 }));
 
-export const MSC_Patrimonial = mysqlTable('MSC_Patrimonial', {
+export const MSC_Patrimonial = mysqlTable('msc_patrimonial', {
     id: serial('id').primaryKey(),
     tipo_matriz: char('tipo_matriz', { length: 4 }),
     cod_ibge: int('cod_ibge').notNull(),
@@ -611,7 +611,7 @@ export const MSC_Patrimonial = mysqlTable('MSC_Patrimonial', {
         foreignColumns: [Conta_Contabil.cod_conta_contabil],
     }),
 }));
-export const MSC_Orcamentaria = mysqlTable('MSC_Orcamentaria', {
+export const MSC_Orcamentaria = mysqlTable('msc_orcamentaria', {
     id: serial('id').primaryKey(),
     tipo_matriz: char('tipo_matriz', { length: 4 }),
     cod_ibge: int('cod_ibge').notNull(),
@@ -649,7 +649,7 @@ export const MSC_Orcamentaria = mysqlTable('MSC_Orcamentaria', {
     }),
 }));
 
-export const MSC_Controle = mysqlTable('MSC_Controle', {
+export const MSC_Controle = mysqlTable('msc_controle', {
     id: serial('id').primaryKey(),
     tipo_matriz: char('tipo_matriz', { length: 4 }),
     cod_ibge: int('cod_ibge').notNull(),
@@ -684,4 +684,29 @@ export const MSC_Controle = mysqlTable('MSC_Controle', {
         columns: [table.conta_contabil],
         foreignColumns: [Conta_Contabil.cod_conta_contabil],
     }),
+}));
+
+export const tema = mysqlTable("tema", {
+  codigoTema: varchar("codigoTema", { length: 255 }).primaryKey(),
+  nomeTema: varchar("nomeTema", { length: 255 }),
+});
+
+export const subtema = mysqlTable("subtema", {
+  codigoSubtema: varchar("codigoSubtema", { length: 255 }).primaryKey(),
+  nomesubtema: varchar("nomesubtema", { length: 255 }),
+  codigoTema: varchar("codigoTema", { length: 255 })
+    .notNull()
+    .references(() => tema.codigoTema),
+});
+
+export const serie = mysqlTable("serie", {
+  codigoSerie: varchar("codigoSerie", { length: 255 }),
+  data: datetime("data"),
+  codigoSubtema: varchar("codigoSubtema", { length: 255 })
+    .notNull()
+    .references(() => subtema.codigoSubtema),
+  nomeSerie: varchar("nomeSerie", { length: 255 }),
+  valor: double("valor"),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.codigoSerie, table.data] }),
 }));

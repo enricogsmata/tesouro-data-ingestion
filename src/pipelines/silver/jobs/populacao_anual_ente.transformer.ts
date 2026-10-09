@@ -2,6 +2,7 @@ import { bronzeDB, silverDB } from "../../../database/dbConnection.js";
 import { rawDs4SiconfiTtRreo } from "../../../database/bronze_schema.js";
 import { createLogger } from "../../../services/logs.js";
 import { Populacao_Anual_Ente } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewPopulacao = typeof Populacao_Anual_Ente.$inferInsert;
@@ -22,7 +23,7 @@ export async function populacaoAnualEnteTransformerOrchestrator(raw: RawRreo) {
 function transform(item: RawRreo): NewPopulacao | null {
     const log = logger.forMethod('transform');
     try {
-        if (!item.cod_ibge || !item.exercicio || item.populacao === null) return null;
+        if (item.cod_ibge == null || item.exercicio == null || item.populacao == null) return null;
         return {
             cod_ibge: item.cod_ibge,
             ano_exercicio: item.exercicio,
@@ -37,8 +38,15 @@ function transform(item: RawRreo): NewPopulacao | null {
 async function save(transformed: NewPopulacao) {
     const log = logger.forMethod('save');
     try {
-        await silverDB.insert(Populacao_Anual_Ente).ignore().values(transformed);
+        await silverDB
+            .insert(Populacao_Anual_Ente)
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    populacao: sql`VALUES(populacao)`,
+                },
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

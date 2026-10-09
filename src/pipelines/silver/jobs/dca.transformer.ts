@@ -9,6 +9,7 @@ import { rotuloTransformerOrchestrator } from "./rotulo.transformer.js";
 import { colunaTransformerOrchestrator } from "./coluna.transformer.js";
 import { contaTransformerOrchestrator } from "./conta.transformer.js";
 import { DCA } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawDca = typeof rawDs4SiconfiTtDca.$inferSelect;
 type NewDca = typeof DCA.$inferInsert;
@@ -27,7 +28,7 @@ export async function dcaTransformerOrchestrator() {
             if (transformed && transformed.length > 0)
                 await save(transformed); 
             else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Lista de dados tratados nula ou vazia.`);
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -39,7 +40,12 @@ async function load(index: number): Promise<RawDca[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await bronzeDB.select().from(rawDs4SiconfiTtDca).offset(nextOffset).limit(BATCH_SIZE) as RawDca[];
+        const response = await bronzeDB
+            .select()
+            .from(rawDs4SiconfiTtDca)
+            .orderBy(rawDs4SiconfiTtDca.id)
+            .offset(nextOffset)
+            .limit(BATCH_SIZE) as RawDca[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -64,18 +70,18 @@ async function transform(rawItems: RawDca[]): Promise<NewDca[] | null> {
                 esfera: null
             } as any);
             
-            if (idAnexo) {
+            if (idAnexo != null) {
                 await rotuloTransformerOrchestrator(raw as any, idAnexo);
                 await colunaTransformerOrchestrator(raw as any);
                 await contaTransformerOrchestrator(raw as any);
             }
 
             if (
-                raw.exercicio !== null &&
-                raw.instituicao !== null &&
-                raw.cod_ibge !== null &&
-                raw.coluna !== null &&
-                raw.cod_conta !== null
+                raw.exercicio != null &&
+                raw.instituicao != null &&
+                raw.cod_ibge != null &&
+                raw.coluna != null &&
+                raw.cod_conta != null
             ) {
                 const newDca: NewDca = {
                     exercicio: raw.exercicio,
@@ -103,9 +109,13 @@ async function save(transformed: NewDca[]) {
     try {
         await silverDB
             .insert(DCA)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    valor: sql`VALUES(valor)`,
+                },
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }

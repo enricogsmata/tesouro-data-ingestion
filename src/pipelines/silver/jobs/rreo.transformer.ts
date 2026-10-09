@@ -9,6 +9,7 @@ import { rotuloTransformerOrchestrator } from "./rotulo.transformer.js";
 import { colunaTransformerOrchestrator } from "./coluna.transformer.js";
 import { contaTransformerOrchestrator } from "./conta.transformer.js";
 import { RREO_ou_RGF } from "../../../database/silver_schema.js";
+import { sql } from "drizzle-orm";
 
 type RawRreo = typeof rawDs4SiconfiTtRreo.$inferSelect;
 type NewRreo = typeof RREO_ou_RGF.$inferInsert;
@@ -27,7 +28,7 @@ export async function rreoTransformerOrchestrator() {
             if (transformed && transformed.length > 0)
                 await save(transformed); 
             else
-                log.error({data: JSON.stringify(transformed, null, 4) ?? transformed}, `Lista de dados tratados nula ou vazia.`);
+                log.error({ data: JSON.stringify(transformed, null, 4) ?? transformed }, `Lista de dados tratados nula ou vazia.`);
         }
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na conversão de dados.`);
@@ -39,7 +40,12 @@ async function load(index: number): Promise<RawRreo[]> {
 
     try {
         const nextOffset = index * BATCH_SIZE;
-        const response = await bronzeDB.select().from(rawDs4SiconfiTtRreo).offset(nextOffset).limit(BATCH_SIZE) as RawRreo[];
+        const response = await bronzeDB
+            .select()
+            .from(rawDs4SiconfiTtRreo)
+            .orderBy(rawDs4SiconfiTtRreo.id)
+            .offset(nextOffset)
+            .limit(BATCH_SIZE) as RawRreo[];
         return response;
     } catch (error: any) {
         log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha ao carregar dados brutos.`);
@@ -60,18 +66,18 @@ async function transform(rawItems: RawRreo[]): Promise<NewRreo[] | null> {
             
             const idAnexo = await anexoTransformerOrchestrator(raw);
             
-            if (idAnexo) {
+            if (idAnexo != null) {
                 await rotuloTransformerOrchestrator(raw, idAnexo);
                 await colunaTransformerOrchestrator(raw);
                 await contaTransformerOrchestrator(raw);
             }
 
             if (
-                raw.exercicio !== null &&
-                raw.instituicao !== null &&
-                raw.cod_ibge !== null &&
-                raw.coluna !== null &&
-                raw.cod_conta !== null
+                raw.exercicio != null &&
+                raw.instituicao != null &&
+                raw.cod_ibge != null &&
+                raw.coluna != null &&
+                raw.cod_conta != null
             ) {
                 const newRreo: NewRreo = {
                     exercicio: raw.exercicio,
@@ -101,9 +107,15 @@ async function save(transformed: NewRreo[]) {
     try {
         await silverDB
             .insert(RREO_ou_RGF)
-            .ignore()
-            .values(transformed);
+            .values(transformed)
+            .onDuplicateKeyUpdate({
+                set: {
+                    periodo: sql`VALUES(periodo)`,
+                    periodicidade: sql`VALUES(periodicidade)`,
+                    valor: sql`VALUES(valor)`,
+                },
+            });
     } catch (error: any) {
-        log.fatal({ data: JSON.stringify(error, null, 4) }, `Falha na persistência.`);
+        log.fatal({ data: error?.cause?.message ?? error?.message }, `Falha na persistência.`);
     }
 }
