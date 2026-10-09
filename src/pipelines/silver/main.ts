@@ -25,6 +25,21 @@ import { transferenciaTransformerOrchestrator } from "./jobs/transferencia.trans
 
 const logger = createLogger(import.meta.url);
 
+/**
+ * Orquestrador da Camada Silver.
+ *
+ * Responsável por executar sequencialmente os jobs de transformação e carga (ETL/ELT)
+ * a partir das tabelas brutas da camada Bronze para o modelo relacional normalizado da Silver.
+ *
+ * A ordem de execução respeita a integridade referencial:
+ * 1. Entidades primárias / Dimensões base (ex: Ente com dados do IBGE, Credor)
+ * 2. Operações de crédito e pleitos (PVL)
+ * 3. Tabelas filhas e cronogramas (pagamentos, liberações, taxa de câmbio, CDP)
+ * 4. Módulos de custos (pessoal ativo, inativo, pensionista, transferências, depreciação)
+ * 5. Indicadores fiscais e séries temporais (resultado fiscal)
+ * 6. Demonstrativos e Matrizes Contábeis (RREO, RGF, DCA, MSC Patrimonial/Orçamentária/Controle)
+ * 7. Metadados e extratos de entregas (Extrato Entregas, Anexos Relatórios)
+ */
 export async function silverOrchestrator() {
     const log = logger.forMethod('silverOrchestrator');
 

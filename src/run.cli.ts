@@ -1,3 +1,13 @@
+/**
+ * @file run.cli.ts
+ * @description Interface de Linha de Comando (CLI) para execução customizada e modular do pipeline
+ * de ingestão do Tesouro Nacional Transparente.
+ *
+ * Suporta dois modos de operação:
+ * 1. Interativo: menus via terminal (perguntas passo a passo com readline)
+ * 2. Autônomo / Flags: passagem de argumentos no comando (ex: `npx tsx src/run.cli.ts bronze-fetch -e 4`)
+ */
+
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { asc, eq } from 'drizzle-orm';

@@ -1,15 +1,14 @@
 /* 
     Arquivo responsável pela lógica de descoberta/scrapping de APIs e Endpoints no portal do Tesouro Nacional Transparente. Automaticamente coleta os conjuntos de dados e armazena em uma estrutura de dados.
 */
-import axios, { type AxiosResponse } from "axios";
-import * as cheerio from 'cheerio';
-import puppeteer, { Browser } from "puppeteer";
+import puppeteer, { type Browser } from "puppeteer";
 import YAML from 'yaml';
-import path from "path";
-import { fileURLToPath } from "url";
 import { bronzeDB } from "../../../database/dbConnection.js";
 import type { NewDataSource } from "../../../database/types.js";
 import { createLogger } from "../../../services/logs.js";
+import * as cheerio from 'cheerio';
+import axios from 'axios';
+import type { AxiosResponse } from 'axios';
 
 // - URL/PATH base utilizados na descoberta dos conjuntos de dados -
 const BASE_URL: URL = new URL('https://www.tesourotransparente.gov.br/');
@@ -20,13 +19,18 @@ const BASE_CKAN_PATH: string = '/ckan/dataset'
 const logger = createLogger(import.meta.url);
 // - - -
 
-/*
-    - - - - - - -
-    > ORQUESTRADOR
-    - - - - - - -
-    > Opera através de 5 etapas modulares consultando as páginas do portal do Tesouro e extraíndo URLs/Dados de cada API/Endpoints
-    > Retorna uma lista de objetos IDataSource tipados
-*/
+/**
+ * Orquestrador da Descoberta de Fontes de Dados (Discovery).
+ *
+ * Executa as 5 tarefas modulares de web scraping no portal CKAN do Tesouro Transparente:
+ * 1. Descoberta de datasets disponíveis no catálogo com formato API (`?res_format=API`).
+ * 2. Navegação até a página individual do dataset para localizar links de recursos.
+ * 3. Identificação da página de documentação da API.
+ * 4. Resolução da URL do portal Swagger / OpenAPI (ex: apidatalake / apiapex).
+ * 5. Extração dos metadados OpenAPI via interceptação de rede no Puppeteer ou fallback ativo.
+ *
+ * @returns Lista de fontes de dados prontas para inserção na tabela `data_sources` ou null em caso de falha crítica
+ */
 export async function BuildDataSources(): Promise<NewDataSource[] | null> {
     const context = 'BuildDataSources';
 

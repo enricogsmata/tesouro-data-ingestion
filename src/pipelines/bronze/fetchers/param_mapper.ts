@@ -1,3 +1,12 @@
+/**
+ * @file param_mapper.ts
+ * @description Resolvedor de parâmetros dinâmicos para a extração da Camada Bronze.
+ *
+ * Mapeia os parâmetros de query e path obrigatórios identificados nos metadados OpenAPI/Swagger
+ * para funções geradoras de valores válidos (ex: intervalos de anos, tipos de demonstrativos,
+ * classes contábeis e lista dinâmica de códigos IBGE de Entes da Federação).
+ */
+
 import { eq } from "drizzle-orm";
 import { bronzeDB } from "../../../database/dbConnection.js";
 import { endpoints, rawEndpointResponse } from "../../../database/bronze_schema.js"
@@ -11,7 +20,8 @@ type ParameterResolverMap = {
 };
 
 /**
- * Dicionário de parâmetros obrigatórios / funções de busca e retorno dos itens exigidos no parâmetro
+ * Dicionário de parâmetros obrigatórios e suas respectivas estratégias de resolução dinâmica.
+ * O EndpointFetcher utiliza essas funções para gerar o produto cartesiano de requisições.
  */
 export const parameterResolver: ParameterResolverMap = {
     "an_exercicio": async () => {

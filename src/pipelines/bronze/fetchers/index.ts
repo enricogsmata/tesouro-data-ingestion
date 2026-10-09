@@ -14,9 +14,17 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 Horas
 const IS_SAMPLING_MODE = false;
 
 /**
- * 
- * @param DataSources - Conjunto de fontes de dados extraídos na página do CKAN
- * @param endpoints - Conjunto de endpoint extraídos das fontes de dados do CKAN
+ * Orquestrador da extração paginada de dados dos endpoints descobertos.
+ *
+ * Itera pelos endpoints mapeados na camada Bronze, limpando registros prévios das tabelas brutas
+ * correspondentes para garantir idempotência, e aciona o extrator HTTP para cada serviço.
+ *
+ * @param DataSources - Lista de fontes de dados cadastradas com suas URLs base
+ * @param endpoints - Lista de endpoints mapeados para extração
+ * @param startEndpointId - ID do endpoint inicial para retomar ou filtrar o processamento
+ * @param startOffset - Offset inicial de paginação para o primeiro endpoint
+ * @param maxOffset - Limite de offset máximo para encerrar a extração
+ * @param singleEndpoint - Se verdadeiro, processa apenas o endpoint startEndpointId
  */
 export async function EndpointFetcherOrchestrator(DataSources: DataSource[], endpoints: Endpoint[], startEndpointId?: number, startOffset?: number, maxOffset?: number, singleEndpoint?: boolean) {
     const context = `EndpointFetcherOrchestrator`;
@@ -73,10 +81,13 @@ export async function EndpointFetcherOrchestrator(DataSources: DataSource[], end
 }
 
 /**
- * 
- * @param fullUrl - Url completa para requisição no endpoint: base url + endpoint
- * @param endpoint - Objeto do endpoint que será feita a requisição
- * @returns - Em caso de erro paralisa a execução do método
+ * Realiza as requisições HTTP para um endpoint específico, gerenciando parâmetros obrigatórios,
+ * produto cartesiano de combinações, paginação por cursor/offset, retentativas e cache de 24h.
+ *
+ * @param fullUrl - URL base absoluta do endpoint
+ * @param endpoint - Metadados do endpoint a ser consultado
+ * @param maxOffset - Limite de offset máximo para interromper o fetch
+ * @param initialOffset - Offset inicial para o início da paginação
  */
 async function EndpointFetcher(fullUrl: string, endpoint: Endpoint, maxOffset?: number, initialOffset?: number) {
     const context = `EndpointFetcher`;

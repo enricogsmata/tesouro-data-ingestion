@@ -1,5 +1,28 @@
+/**
+ * @file endpoint_mapper.ts
+ * @description Mapeador em memória responsável por processar os metadados OpenAPI/Swagger
+ * extraídos na etapa de Discovery e converter especificações de paths e métodos em estruturas
+ * relacionais tipadas para a camada Bronze (Endpoints e EndpointParameters).
+ */
+
 import type { DataSource, HttpMethod, MappedEndpointWithParams, NewEndpoint, NewEndpointParameter } from "../../../database/types.js";
 
+/**
+ * Gera de forma determinística e sanitizada o nome da tabela física de destino (targetTable)
+ * para armazenamento dos registros brutos do endpoint na camada Bronze.
+ *
+ * Regras aplicadas:
+ * 1. Concatena de forma segura o `baseUrl` e o `path` do endpoint.
+ * 2. Remove parâmetros dinâmicos de rota (ex: `/{id}`, `/:id`).
+ * 3. Sanitiza caracteres especiais e extrai até 3 segmentos finais significativos do caminho.
+ * 4. Aplica o prefixo padrão `raw_ds<ID>_` e limita a 55 caracteres para garantir compatibilidade
+ *    com o limite de 64 caracteres de identificadores de tabela do MySQL.
+ *
+ * @param dataSourceId - Identificador único da fonte de dados (DataSource)
+ * @param baseUrl - URL base da API
+ * @param path - Caminho relativo do endpoint
+ * @returns Nome normalizado da tabela de destino
+ */
 function generateTargetTableName(dataSourceId: number | string, baseUrl: string, path: string): string {
     // 1. Junta o baseUrl e o path de forma segura
     const safeBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
@@ -42,6 +65,14 @@ function generateTargetTableName(dataSourceId: number | string, baseUrl: string,
     return finalName.substring(0, 55);
 }
 
+/**
+ * Itera sobre todas as fontes de dados (DataSources) fornecidas, analisa a especificação
+ * OpenAPI/Swagger salva no campo `rawMetadata` e extrai todos os endpoints HTTP suportados,
+ * gerando a associação com seus parâmetros de requisição.
+ *
+ * @param dataSources - Coleção de fontes de dados cadastradas com metadados OpenAPI
+ * @returns Lista de pares contendo o endpoint mapeado e seus parâmetros associados
+ */
 export function MapDiscoveredEndpointsInMemory(dataSources: DataSource[]): MappedEndpointWithParams[] {
     const mappedEndpoints: MappedEndpointWithParams[] = [];
     const HTTP_METHODS = ["get", "post", "put", "delete", "patch"] as const;

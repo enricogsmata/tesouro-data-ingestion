@@ -14,14 +14,33 @@ type PersistEndpointResponse = {
 
 const logger = createLogger(import.meta.url);
 
+/**
+ * Opções de configuração para o orquestrador da camada Bronze.
+ */
 export interface BronzeOrchestratorOptions {
+    /** Se verdadeiro, ignora as etapas de Discovery no CKAN e mapeamento de endpoints, usando dados já persistidos */
     skipDiscovery?: boolean | undefined;
+    /** Identificador inicial de endpoint (filtra endpoints com ID >= startEndpointId ou exatamente esse ID se singleEndpoint for true) */
     startEndpointId?: number | undefined;
+    /** Offset numérico inicial para a paginação do primeiro endpoint processado */
     startOffset?: number | undefined;
+    /** Offset numérico máximo permitido para interromper a paginação */
     maxOffset?: number | undefined;
+    /** Se verdadeiro, executa o fetch exclusivamente para o endpoint indicado em startEndpointId */
     singleEndpoint?: boolean | undefined;
 }
 
+/**
+ * Orquestrador central da Camada Bronze.
+ *
+ * Responsável por:
+ * 1. Descoberta de fontes de dados públicas no CKAN do Tesouro Nacional (Scraping com Cheerio e Puppeteer).
+ * 2. Persistência dos metadados brutos e especificações OpenAPI/Swagger no banco de dados.
+ * 3. Mapeamento dos caminhos, métodos HTTP e parâmetros dos endpoints.
+ * 4. Extração paginada e persistência de dados brutos (Raw) nas tabelas relacionais do banco.
+ *
+ * @param options - Opções opcionais para controlar filtros, paginação e execução parcial
+ */
 export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
     const log = logger.forMethod(`bronzeOrchestrator`);
     const skipDiscovery = options?.skipDiscovery ?? false;
