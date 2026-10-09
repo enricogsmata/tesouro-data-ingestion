@@ -3,7 +3,7 @@ import { bronzeDB } from "../../database/dbConnection.js";
 import { dataSources, endpointParameters, endpoints } from "../../database/bronze_schema.js";
 import type { DataSource, Endpoint, MappedEndpointWithParams, NewDataSource, NewEndpoint, NewEndpointParameter } from "../../database/types.js";
 import { createLogger } from "../../services/logs.js";
-import { BuildDataSources } from "./discovery/discovery.js";
+import { BuildDataSources, type DiscoveryRetryConfig } from "./discovery/discovery.js";
 import { MapDiscoveredEndpointsInMemory } from "./discovery/endpoint_mapper.js";
 import { EndpointFetcherOrchestrator } from "./fetchers/index.js";
 
@@ -28,6 +28,8 @@ export interface BronzeOrchestratorOptions {
     maxOffset?: number | undefined;
     /** Se verdadeiro, executa o fetch exclusivamente para o endpoint indicado em startEndpointId */
     singleEndpoint?: boolean | undefined;
+    /** Configurações customizadas de retry para a etapa de discovery */
+    discoveryRetry?: DiscoveryRetryConfig | undefined;
 }
 
 /**
@@ -57,7 +59,7 @@ export async function bronzeOrchestrator(options?: BronzeOrchestratorOptions) {
         // -------------------------------------------------------------
         // Fluxo de scraping do CKAN e descoberta dos conjuntos de dados
         // -------------------------------------------------------------
-        const dataSourcesList: NewDataSource[] | null = await BuildDataSources();
+        const dataSourcesList: NewDataSource[] | null = await BuildDataSources(options?.discoveryRetry);
 
         if (!dataSourcesList) {
             log.fatal("[ERRO] Falha no seed dos data sources!");
