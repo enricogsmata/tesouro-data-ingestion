@@ -34,6 +34,7 @@ O projeto é estruturado segundo os princípios da **Arquitetura Medalhão (Meda
 
 O ecossistema de dados públicos do Tesouro Nacional disponibiliza conjuntos de dados complexos através de múltiplos serviços (APIs REST, Oracle APEX e Swagger/OpenAPI). Este pipeline automatiza desde a varredura inicial da página do CKAN até a carga analítica final.
 
+```mermaid
 flowchart TD
     subgraph Discovery ["1. Discovery & Web Scraping"]
         A["Portal CKAN<br/>/ckan/dataset?res_format=API"] -->|Cheerio| B["Páginas de Datasets"]
@@ -53,6 +54,7 @@ flowchart TD
         I -->|Sanitização, Parse de Datas, Tipagem| J["Transformação & Resolução de FKs"]
         J -->|Upsert onDuplicateKeyUpdate| K[("Banco Silver Relacional:<br/>Dimensões & Fatos")]
     end
+```
 
 ---
 
